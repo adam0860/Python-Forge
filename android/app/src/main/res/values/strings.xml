@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Python Forge</string>
+    <string name="title_activity_main">Python Forge</string>
+    <string name="package_name">com.pythonforge.app</string>
+    <string name="custom_url_scheme">com.pythonforge.app</string>
+</resources>

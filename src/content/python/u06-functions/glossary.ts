@@ -1,0 +1,77 @@
+import type { GlossaryEntry } from '../../types';
+
+// Glossary terms introduced by this unit that are NOT in scripts/glossary-master.ts.
+export const glossary: GlossaryEntry[] = [
+  {
+    id: 'function-parameter',
+    term: 'Function parameter',
+    course: 'python',
+    category: 'Functions',
+    short: 'A name in a function definition that receives a value when the function is called: in `def heal(hp, amount):`, `hp` and `amount` are parameters. The values passed in the call are **arguments**.',
+    see: ['argument', 'function'],
+  },
+  {
+    id: 'side-effect',
+    term: 'Side effect',
+    course: 'python',
+    category: 'Functions',
+    short: 'Anything a function does besides returning a value: printing, writing a file, changing a global variable, or mutating an object passed in. A function without side effects is called **pure**.',
+    see: ['function', 'mutable'],
+  },
+  {
+    id: 'scope',
+    term: 'Scope',
+    course: 'python',
+    category: 'Functions',
+    short: 'The region of a program where a name is visible. Python looks names up in the order Local → Enclosing → Global → Built-in (LEGB).',
+    see: ['namespace'],
+  },
+  {
+    id: 'namespace',
+    term: 'Namespace',
+    course: 'python',
+    category: 'Functions',
+    short: 'A mapping from names to objects — in practice a dictionary. Every function call, module, class and instance has its own. `globals()` and `locals()` expose two of them.',
+    see: ['scope'],
+  },
+  {
+    id: 'higher-order-function',
+    term: 'Higher-order function',
+    course: 'python',
+    category: 'Functions',
+    short: 'A function that takes another function as an argument, returns one, or both. `sorted(items, key=len)` and `map` are higher-order functions.',
+    see: ['lambda', 'function'],
+  },
+  {
+    id: 'lambda',
+    term: 'Lambda',
+    course: 'python',
+    category: 'Functions',
+    short: 'A small anonymous function written as a single expression: `lambda x: x * 2`. Handy for `key=` arguments; use `def` for anything longer.',
+    see: ['higher-order-function'],
+  },
+  {
+    id: 'closure',
+    term: 'Closure',
+    course: 'python',
+    category: 'Functions',
+    short: 'A function that remembers variables from the enclosing scope in which it was created, even after that scope has finished. `make_counter` returning `increment` is the classic example.',
+    see: ['scope'],
+  },
+  {
+    id: 'recursion',
+    term: 'Recursion',
+    course: 'python',
+    category: 'Functions',
+    short: 'A function solving a problem by calling itself on a smaller piece of it, with a **base case** that stops the chain. CPython limits the depth (1,000 frames by default).',
+    see: ['function'],
+  },
+  {
+    id: 'memoization',
+    term: 'Memoization',
+    course: 'python',
+    category: 'Functions',
+    short: 'Caching a function’s results by argument so repeated calls are answered instantly. `functools.cache` does it with one line and turns exponential recursion like naive Fibonacci into linear time.',
+    see: ['recursion'],
+  },
+];

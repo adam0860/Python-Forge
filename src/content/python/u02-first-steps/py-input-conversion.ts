@@ -1,0 +1,273 @@
+import type { Lesson } from '../../types';
+
+export const lesson: Lesson = {
+  id: 'py-input-conversion',
+  title: 'Input and Type Conversion',
+  summary: 'Make programs interactive with input(), convert text to numbers and back, understand the errors bad input causes — and put the whole unit together in a small interactive tool.',
+  minutes: 16,
+  objectives: [
+    'Read a line of text from the user with `input()` and explain why it always returns a `str`',
+    'Convert between types with `int()`, `float()`, `str()` and `bool()`, and predict their results',
+    'Recognize the `ValueError` raised by invalid conversions and check input with `str.isdigit()`',
+    'Explain when Python converts automatically (int → float, bool → int) and when it refuses',
+    'Write a complete read → convert → compute → print program',
+  ],
+  steps: [
+    {
+      kind: 'concept',
+      title: 'Asking the user: input()',
+      blocks: [
+        {
+          type: 'p',
+          text: 'So far your programs have only *talked*. `input()` lets them *listen*: it shows an optional prompt, waits for the user to type a line and press Enter, and **returns what they typed as a string**.',
+        },
+        {
+          type: 'code',
+          title: 'greet.py',
+          runnable: true,
+          stdin: 'Ada',
+          code: 'name = input("What is your name? ")\nprint("Welcome,", name)\nprint(type(name))',
+          output: "What is your name? Ada\nWelcome, Ada\n<class 'str'>",
+          annotations: [
+            { lines: 1, text: 'The prompt is printed, the program pauses, and whatever the user types (without the Enter key) becomes the [[return-value|return value]], stored in `name`.' },
+            { lines: 3, text: '`input()` **always** returns a `str` — even if the user types `42`.' },
+          ],
+        },
+        {
+          type: 'callout',
+          variant: 'tip',
+          title: 'Input in this app',
+          text: 'The app can’t pause mid-program for you to type, so code that calls `input()` shows an **Input** box under it: put one line per `input()` call there *before* pressing Run. The console then shows what was "typed" after each prompt, just like a real terminal. On your PC, `python greet.py` really does wait for you.',
+        },
+        {
+          type: 'callout',
+          variant: 'cpp',
+          text: '`input()` is Python’s `std::getline(std::cin, line)`: it reads a whole line as text. There’s no `std::cin >> number` equivalent that parses as it reads — you read text and convert it explicitly, which you’ll do on the next card.',
+        },
+      ],
+    },
+    {
+      kind: 'mcq',
+      prompt: 'A user runs `age = input("Age: ")` and types `29`. What is the value of `age`?',
+      options: [
+        { text: 'The int `29`', why: 'This is the classic beginner assumption — but `input()` never converts anything.' },
+        { text: 'The string `"29"`', correct: true, why: 'Right. `input()` always returns a string; convert it with `int(age)` to do arithmetic.' },
+        { text: 'The float `29.0`', why: 'No conversion happens at all, to int or to float.' },
+        { text: '`None`, until the program converts it', why: '`input()` returns the text that was typed, as a `str`.' },
+      ],
+      explanation: '`input()` returns exactly the characters typed, as a `str`: `"29"`. So `age + 1` would be a `TypeError` and `age * 2` would be `"2929"`. Convert first: `age = int(input("Age: "))`.',
+    },
+    {
+      kind: 'concept',
+      title: 'Type conversion',
+      blocks: [
+        {
+          type: 'p',
+          text: 'To turn a value of one type into another, **call the type** like a function: `int(...)`, `float(...)`, `str(...)`, `bool(...)`. This is **[[type-conversion|type conversion]]** (some languages call it casting). Python never does it silently between text and numbers — you always say what you want.',
+        },
+        {
+          type: 'code',
+          title: 'convert.py',
+          runnable: true,
+          code: 'print(int("42") + 1)\nprint(float("3.5") * 2)\nprint(int("  7 "))\nprint(str(99) + " problems")\nprint(int(3.99), int(-3.99))\nprint(int(float("3.5")))\nprint(float(10))',
+          output: '43\n7.0\n7\n99 problems\n3 -3\n3\n10.0',
+          annotations: [
+            { lines: 1, text: 'Text to int. Now `+` is arithmetic.' },
+            { lines: 3, text: '`int()` and `float()` ignore spaces around the number — handy, because users love typing stray spaces.' },
+            { lines: 4, text: 'Number to text, so it can be joined with another string.' },
+            { lines: 5, text: 'A float to an int **truncates toward zero** — it chops off the fraction. Use `round()` if you want rounding.' },
+            { lines: 6, text: '`int("3.5")` would fail (see the next card), so convert to float first, then to int.' },
+          ],
+        },
+        {
+          type: 'table',
+          headers: ['Call', 'Result', 'Rule'],
+          rows: [
+            ['`int("42")`', '`42`', 'Text must look like a whole number'],
+            ['`int(7.9)`', '`7`', 'Floats are truncated toward zero'],
+            ['`float("2.5")`', '`2.5`', 'Text must look like a number (`"1e3"`, `"inf"` work too)'],
+            ['`str(3.0)`', '`"3.0"`', 'Anything can become text'],
+            ['`bool(0)`, `bool("")`', '`False`', 'Zero and empty values are false…'],
+            ['`bool(42)`, `bool("False")`', '`True`', '…everything else is true — even the text `"False"`!'],
+          ],
+        },
+        {
+          type: 'callout',
+          variant: 'warning',
+          title: '`bool("False")` is True',
+          text: '`bool()` of a string only asks "is it empty?". The text `"False"` has five characters, so it’s `True`. To check what a user typed, compare the text: `answer.strip().lower() == "yes"`. You’ll learn comparisons in the next unit.',
+        },
+      ],
+    },
+    {
+      kind: 'predict',
+      prompt: 'Predict the output.',
+      code: 'print(bool(0), bool(42), bool(""), bool("False"))\nprint(int(9.99) + int("1"))\nprint("5" * 3, int("5") * 3)',
+      answer: 'False True False True\n10\n555 15',
+      hint: 'Empty and zero values are `False`; any non-empty string is `True`. `int()` truncates floats. `"5" * 3` repeats the text.',
+      explanation: '`bool(0)` and `bool("")` are `False`; `bool(42)` is `True`, and so is `bool("False")` because the string isn’t empty. `int(9.99)` truncates to `9`, plus `int("1")` makes `10`. Finally `"5" * 3` repeats the string (`555`) while `int("5") * 3` multiplies (`15`).',
+    },
+    {
+      kind: 'concept',
+      title: 'When conversion fails: ValueError',
+      blocks: [
+        {
+          type: 'p',
+          text: 'If the text doesn’t look like the number you asked for, the conversion raises a **`ValueError`**: right type (a string), wrong value.',
+        },
+        {
+          type: 'code',
+          title: 'bad_input.py',
+          runnable: true,
+          code: 'lives = int("ten")',
+          output: "Traceback (most recent call last):\n  File \"main.py\", line 1, in <module>\n    lives = int(\"ten\")\nValueError: invalid literal for int() with base 10: 'ten'",
+          annotations: [
+            { lines: 1, text: '"Invalid literal for int() with base 10" means "this text isn’t a whole number written in decimal". The message even quotes the bad text.' },
+          ],
+        },
+        {
+          type: 'p',
+          text: 'In a real program, users will type `ten`, `3.5`, or nothing at all. You have two tools. Right now you can *check first*: `text.isdigit()` returns `True` only if every character is a digit. Soon — in the Errors and Files unit — you’ll learn the Pythonic approach: *try* the conversion and *handle* the `ValueError` with `try`/`except`.',
+        },
+        {
+          type: 'code',
+          title: 'isdigit.py',
+          runnable: true,
+          code: 'print("42".isdigit(), "-5".isdigit(), "4.2".isdigit())',
+          output: 'True False False',
+          annotations: [
+            { lines: 1, text: '`isdigit()` is strict: a minus sign or a decimal point makes it `False`, even though `int("-5")` and `float("4.2")` would work. That’s one reason the try/except approach usually wins.' },
+          ],
+        },
+        {
+          type: 'callout',
+          variant: 'why',
+          title: 'Why crash instead of guessing?',
+          text: 'Some languages turn `"ten"` into `0` or `NaN` and carry on. Then a typo silently becomes a zero-damage attack or a free item, and you find the bug weeks later. Python’s philosophy is *errors should never pass silently*: fail loudly at the exact line, so the problem is fixed where it starts.',
+        },
+      ],
+    },
+    {
+      kind: 'truefalse',
+      prompt: '`int("3.7")` returns `3`.',
+      answer: false,
+      explanation: 'False — it raises `ValueError: invalid literal for int() with base 10: \'3.7\'`. `int()` accepts text only if it looks like a *whole* number. To get `3` from `"3.7"`, convert to float first: `int(float("3.7"))`. (Given an actual float, `int(3.7)` does return `3`.)',
+    },
+    {
+      kind: 'concept',
+      title: 'Automatic conversions — and their limits',
+      blocks: [
+        {
+          type: 'p',
+          text: 'Python *does* convert automatically in one situation: between **number types**, when no information can be lost. An `int` mixed with a `float` becomes a float, and `True`/`False` behave like `1`/`0` in arithmetic (`bool` is a subclass of `int`).',
+        },
+        {
+          type: 'code',
+          lang: 'pycon',
+          code: '>>> 3 + 2.0\n5.0\n>>> True + True\n2\n>>> 10 * False\n0\n>>> "Level " + 5\nTraceback (most recent call last):\n  File "<python-input-3>", line 1, in <module>\n    "Level " + 5\n    ~~~~~~~~~^~~\nTypeError: can only concatenate str (not "int") to str',
+          annotations: [
+            { lines: 1, text: 'int + float → float. Every int can be written as a float, so this is safe.' },
+            { lines: '3-6', text: '`True` counts as 1 and `False` as 0. Useful for counting: summing a list of booleans counts the `True`s.' },
+            { lines: '7-12', text: 'Text and numbers never mix automatically — that’s strong typing at work. Use `str(5)` or an f-string.' },
+          ],
+        },
+      ],
+    },
+    {
+      kind: 'numeric',
+      prompt: 'What does `print(int(float("7.9")) + round(2.5))` display?',
+      answer: '9',
+      hint: 'Inside out: `float("7.9")`, then `int()` of that. And remember how `round` treats halves.',
+      explanation: '`float("7.9")` is `7.9`, and `int(7.9)` truncates to `7`. `round(2.5)` uses banker’s rounding (halves go to the nearest even number), so it’s `2`. Total: $7 + 2 = 9$.',
+      label: 'Output:',
+    },
+    {
+      kind: 'code',
+      prompt: 'This adder has a bug: entering `12` and `30` prints `Total: 1230`. Fix it so it adds the numbers. With the inputs `12` and `30`, the output should be:\n\n```\nFirst number: 12\nSecond number: 30\nTotal: 42\n```',
+      starter: 'a = input("First number: ")\nb = input("Second number: ")\nprint("Total:", a + b)\n',
+      solution: 'a = int(input("First number: "))\nb = int(input("Second number: "))\nprint("Total:", a + b)\n',
+      stdin: '12\n30',
+      tests: '',
+      expectOutput: 'First number: 12\nSecond number: 30\nTotal: 42',
+      checks: ['Converts both inputs to numbers', 'Prints `Total: 42` for the inputs 12 and 30'],
+      hint: '`input()` returns strings, and `+` on strings joins them. Wrap each `input(...)` in `int(...)`, or convert in the `print` line.',
+      explanation: '`"12" + "30"` is string concatenation, `"1230"`. Converting with `int()` makes `+` arithmetic: `int("12") + int("30")` is `42`. Converting right at the `input()` call, `a = int(input(...))`, is the most common pattern — from then on `a` is a number. (The checker feeds in `12` and `30` for you.)',
+    },
+    {
+      kind: 'concept',
+      title: 'Putting it together: an interactive tool',
+      blocks: [
+        {
+          type: 'p',
+          text: 'Almost every small program follows the same four steps: **read** input, **convert** it, **compute**, and **print** the result. Here’s a damage calculator that uses everything from this unit — input, conversion, arithmetic, `max`, `round` and an f-string:',
+        },
+        {
+          type: 'code',
+          title: 'damage_calc.py',
+          runnable: true,
+          stdin: '48\n20\n1.75',
+          code: '# Read\nattack = int(input("Attack: "))\ndefense = int(input("Defense: "))\ncrit = float(input("Crit multiplier: "))\n\n# Compute\nbase = max(attack - defense, 1)   # always deal at least 1 damage\ncrit_damage = round(base * crit)\n\n# Print\nprint(f"Base hit: {base}  |  Critical hit: {crit_damage}")',
+          output: 'Attack: 48\nDefense: 20\nCrit multiplier: 1.75\nBase hit: 28  |  Critical hit: 49',
+          annotations: [
+            { lines: '2-4', text: 'Read and convert in one step. The multiplier can have a fraction, so it uses `float`.' },
+            { lines: 7, text: '`max(..., 1)` is a floor: even a huge defense can’t reduce damage below 1. $48 - 20 = 28$.' },
+            { lines: 8, text: '$28 \\times 1.75 = 49.0$, and `round` turns it into the int `49`.' },
+            { lines: 11, text: 'The two spaces around `|` are just part of the text.' },
+          ],
+        },
+        {
+          type: 'p',
+          text: 'Press ✏️ to edit it, change the numbers in the Input box, and run it again. Try a defense higher than the attack, and a multiplier like `2.5`.',
+        },
+        {
+          type: 'callout',
+          variant: 'code',
+          text: 'This read → convert → compute → print shape scales all the way up. A web server reads a request, converts JSON to Python objects, computes, and sends a response. A game reads controller input each frame, converts it to movement, updates the world, and draws it.',
+        },
+      ],
+    },
+    {
+      kind: 'code',
+      prompt: 'Write a welcome program. Read a name and a level with these exact prompts, then print a greeting with the name in **title case** and the **next** level number. For the inputs `ada` and `7`:\n\n```\nName: ada\nLevel: 7\nWelcome, Ada! Next level: 8\n```',
+      starter: 'name = input("Name: ")\nlevel = input("Level: ")\n\n# print the greeting\n',
+      solution: 'name = input("Name: ")\nlevel = int(input("Level: "))\n\nprint(f"Welcome, {name.title()}! Next level: {level + 1}")\n',
+      stdin: 'ada\n7',
+      tests: '',
+      expectOutput: 'Name: ada\nLevel: 7\nWelcome, Ada! Next level: 8',
+      checks: ['Capitalizes the name with `.title()`', 'Converts the level to an int and adds 1', 'Matches the output exactly'],
+      hint: 'Convert the level with `int(...)`. In an f-string you can call methods and do arithmetic: `{name.title()}`, `{level + 1}`.',
+      explanation: 'The level must be converted (`int(input(...))`) before `+ 1` can work. `name.title()` capitalizes the first letter of each word. One f-string then builds the line: `f"Welcome, {name.title()}! Next level: {level + 1}"`.',
+    },
+    {
+      kind: 'error',
+      prompt: 'A user enters `5` and expects `You collected 15 coins!`, but the program prints `You collected 555 coins!`. Tap the line that needs fixing.',
+      lines: ['chests = input("Chests opened: ")', 'coins_per_chest = 3', 'total = chests * coins_per_chest', 'print(f"You collected {total} coins!")'],
+      linesAreCode: true,
+      errorLines: [1],
+      explanation: 'The root cause is line 1: `input()` returns the string `"5"`, so line 3 computes `"5" * 3`, which *repeats* the text: `"555"`. Converting at the source — `chests = int(input("Chests opened: "))` — fixes it, and makes every later use of `chests` a number.',
+    },
+    {
+      kind: 'fill',
+      prompt: 'Complete the code so it reads a price with a decimal point and a whole-number quantity, then prints the total.',
+      template: 'price = ___(input("Price: "))\nquantity = ___(input("Quantity: "))\nprint("Total:", ___(price * quantity))',
+      templateIsCode: true,
+      blanks: [{ answers: ['float'] }, { answers: ['int'] }, { answers: ['round'] }],
+      wordBank: ['float', 'int', 'round', 'str', 'bool', 'input'],
+      explanation: 'Prices like `4.99` need `float`; a quantity is a whole number, so `int`. `round(...)` tidies the result — though for real money you’d use `round(x, 2)` or, better, the `decimal` module, because floats can’t store most cent values exactly.',
+    },
+  ],
+  takeaways: [
+    '`input(prompt)` shows the prompt, waits for a line of text and returns it as a `str` — always a string, even if the user types digits.',
+    'Convert by calling the type: `int("42")`, `float("2.5")`, `str(99)`, `bool(x)`. `int()` truncates floats toward zero.',
+    'Invalid text raises `ValueError` (`int("ten")`, `int("3.7")`). Check with `str.isdigit()` for now; later you’ll use `try`/`except`.',
+    '`bool()` is `False` only for zero and empty values — `bool("False")` is `True`.',
+    'Python converts automatically only between numbers (int → float, bool → int), never between text and numbers.',
+    'Most programs follow read → convert → compute → print.',
+  ],
+  reading: [
+    { title: 'Built-in Functions: input()', url: 'https://docs.python.org/3/library/functions.html#input', source: 'docs', note: 'The official definition, including what happens at end of input (EOFError).' },
+    { title: 'Built-in Functions: int()', url: 'https://docs.python.org/3/library/functions.html#int', source: 'docs', note: 'Every way `int()` can convert, including other bases like binary and hex.' },
+    { title: 'Truth Value Testing', url: 'https://docs.python.org/3/library/stdtypes.html#truth-value-testing', source: 'docs', note: 'Exactly which values count as false — the basis of the next unit.' },
+    { title: 'Python Basics: Getting User Input (Real Python)', url: 'https://realpython.com/python-input-output/', source: 'tutorial', note: 'More on reading input and printing output, with practical examples.' },
+  ],
+};

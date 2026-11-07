@@ -109,7 +109,9 @@ jobs:
           npx cap sync android
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
       - name: Build signed release APK and bundle (only when signing secrets exist)
         if: env.HAS_SIGNING == 'true'
         working-directory: android
@@ -121,6 +123,7 @@ jobs:
         run: |
           echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+          chmod +x gradlew
           ./gradlew assembleRelease bundleRelease --no-daemon
       - name: Collect outputs
         run: |

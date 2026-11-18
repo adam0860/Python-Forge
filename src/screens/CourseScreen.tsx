@@ -296,4 +296,6 @@ function LessonSheet({ loc, onClose, progress: p, freeNav }: { loc: LessonLocati
 const FINISH: Record<CourseId, string> = {
   python: 'Finish line: you’ll write professional, idiomatic Python — and be ready for AI & Machine Learning.',
   pyml: 'Finish line: you’ll train neural networks and game-playing agents, and ship them in real projects.',
+  tkinter: 'Finish line: you’ll build, structure, test and package real desktop applications with tkinter.',
+  pygame: 'Finish line: you’ll have built and polished a complete game with pygame, ready to share.',
 };

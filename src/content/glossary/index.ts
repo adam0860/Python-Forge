@@ -1,6 +1,8 @@
 import type { GlossaryEntry } from '../types';
 import { pythonGlossary } from './python';
 import { pymlGlossary } from './pyml';
+import { tkinterGlossary } from './tkinter';
+import { pygameGlossary } from './pygame';
 import { glossary as python_u01 } from '../python/u01-meet-python/glossary';
 import { glossary as python_u02 } from '../python/u02-first-steps/glossary';
 import { glossary as python_u03 } from '../python/u03-decisions/glossary';
@@ -27,10 +29,25 @@ import { glossary as pyml_u08 } from '../pyml/u08-deep-learning/glossary';
 import { glossary as pyml_u09 } from '../pyml/u09-rl/glossary';
 import { glossary as pyml_u10 } from '../pyml/u10-game-ai/glossary';
 import { glossary as pyml_u11 } from '../pyml/u11-applied/glossary';
+import { glossary as tkinter_u01 } from '../tkinter/u01-meet-tkinter/glossary';
+import { glossary as tkinter_u02 } from '../tkinter/u02-widgets/glossary';
+import { glossary as tkinter_u03 } from '../tkinter/u03-layout/glossary';
+import { glossary as tkinter_u04 } from '../tkinter/u04-interaction/glossary';
+import { glossary as tkinter_u05 } from '../tkinter/u05-graphics/glossary';
+import { glossary as tkinter_u06 } from '../tkinter/u06-real-apps/glossary';
+import { glossary as pygame_u01 } from '../pygame/u01-meet-pygame/glossary';
+import { glossary as pygame_u02 } from '../pygame/u02-input-drawing/glossary';
+import { glossary as pygame_u03 } from '../pygame/u03-media/glossary';
+import { glossary as pygame_u04 } from '../pygame/u04-sprites/glossary';
+import { glossary as pygame_u05 } from '../pygame/u05-patterns/glossary';
+import { glossary as pygame_u06 } from '../pygame/u06-craft/glossary';
+import { glossary as pygame_u07 } from '../pygame/u07-capstone/glossary';
 
 export const glossary: GlossaryEntry[] = [
   ...pythonGlossary,
   ...pymlGlossary,
+  ...tkinterGlossary,
+  ...pygameGlossary,
   ...python_u01,
   ...python_u02,
   ...python_u03,
@@ -57,4 +74,17 @@ export const glossary: GlossaryEntry[] = [
   ...pyml_u09,
   ...pyml_u10,
   ...pyml_u11,
+  ...tkinter_u01,
+  ...tkinter_u02,
+  ...tkinter_u03,
+  ...tkinter_u04,
+  ...tkinter_u05,
+  ...tkinter_u06,
+  ...pygame_u01,
+  ...pygame_u02,
+  ...pygame_u03,
+  ...pygame_u04,
+  ...pygame_u05,
+  ...pygame_u06,
+  ...pygame_u07,
 ];

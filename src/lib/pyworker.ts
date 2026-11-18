@@ -73,10 +73,12 @@ def _pf_trim_tb(tb, names):
         tb = tb.tb_next
     return tb
 
-def _pf_run(src, tests, expect, stdin_lines):
+def _pf_run(src, tests, expect, stdin_lines, setup=None):
     ns = {"__name__": "__main__", "__builtins__": builtins}
     builtins.input = _pf_input
     result = {"ok": True, "tests": None, "message": None, "mismatch": False, "stdout": None}
+    if setup:
+        exec(compile(setup, "setup.py", "exec"), ns)
     captured = None
     if expect is not None:
         captured = io.StringIO()
@@ -193,6 +195,7 @@ interface RunMsg {
   tests?: string;
   expectOutput?: string;
   packages?: string[];
+  setup?: string;
 }
 
 async function run(msg: RunMsg) {
@@ -219,7 +222,7 @@ async function run(msg: RunMsg) {
   const lines = (msg.stdin ?? '').split('\n');
   if (msg.stdin !== undefined && lines[lines.length - 1] === '') lines.pop();
   py.setStdin({ stdin: () => (lines.length ? lines.shift()! : null) });
-  const res = runner(msg.code, msg.tests ?? undefined, msg.expectOutput ?? undefined, undefined) as { toJs: (o: object) => Map<string, unknown>; destroy: () => void };
+  const res = runner(msg.code, msg.tests ?? undefined, msg.expectOutput ?? undefined, undefined, msg.setup ?? undefined) as { toJs: (o: object) => Map<string, unknown>; destroy: () => void };
   const map = res.toJs({ dict_converter: Object.fromEntries }) as unknown as Record<string, unknown>;
   res.destroy();
   flush();

@@ -180,5 +180,90 @@
         ["ml-computer-vision-apps", "Practical Computer Vision"],
         ["ml-serving", "Serving Models: APIs, Apps and Edge Devices"],
         ["ml-capstone", "Capstone: An End-to-End AI Project"] ] }
+  ],
+  "tkinter": [
+    { "dir": "u01-meet-tkinter", "id": "tk-u01-meet-tkinter", "icon": "🪟", "level": "Beginner", "title": "Meet tkinter", "description": "What tkinter is and what it is for, how a window comes to life, and the event loop that every GUI program is built around.",
+      "lessons": [
+        ["tk-what-is", "What tkinter Is and What It Is For"],
+        ["tk-first-window", "Your First Window"],
+        ["tk-event-loop", "The Event Loop: How a GUI Really Works"] ] },
+    { "dir": "u02-widgets", "id": "tk-u02-widgets", "icon": "🎛️", "level": "Beginner", "title": "Widgets", "description": "The building blocks of an interface: labels and buttons, text entry, checkboxes, radio buttons, sliders, tk variables, lists and scrollbars.",
+      "lessons": [
+        ["tk-labels-buttons", "Labels, Buttons and Commands"],
+        ["tk-entry-text", "Entry and Text: Letting Users Type"],
+        ["tk-choices", "Checkbuttons, Radiobuttons, Scales and Spinboxes"],
+        ["tk-variables", "Tk Variables and Live Updates"],
+        ["tk-lists", "Listbox, Combobox and Scrollbars"] ] },
+    { "dir": "u03-layout", "id": "tk-u03-layout", "icon": "📐", "level": "Beginner", "title": "Layout", "description": "Placing widgets in a window: pack, grid and place, frames to group things, and layouts that resize gracefully.",
+      "lessons": [
+        ["tk-pack", "pack: Stacking Widgets"],
+        ["tk-grid", "grid: Rows, Columns and Resizing"],
+        ["tk-place-frames", "Frames, place and Layout Recipes"] ] },
+    { "dir": "u04-interaction", "id": "tk-u04-interaction", "icon": "🖱️", "level": "Intermediate", "title": "Events and Interaction", "description": "Reacting to the keyboard and mouse, passing arguments to callbacks, standard dialogs, menus, extra windows, timers and keeping the interface responsive.",
+      "lessons": [
+        ["tk-events", "Binding Events: Keys, Mouse and Focus"],
+        ["tk-callbacks", "Callbacks: Arguments, lambda and partial"],
+        ["tk-dialogs", "Standard Dialogs: Messages, Files and Colors"],
+        ["tk-menus-windows", "Menus and Extra Windows"],
+        ["tk-timers-threads", "Timers, Long Tasks and Threads"] ] },
+    { "dir": "u05-graphics", "id": "tk-u05-graphics", "icon": "🎨", "level": "Intermediate", "title": "Drawing and Themed Widgets", "description": "The Canvas for drawing and animation, the modern ttk widgets (Treeview, Notebook, Progressbar), fonts, colors, images and styling.",
+      "lessons": [
+        ["tk-canvas", "The Canvas: Drawing Shapes"],
+        ["tk-canvas-animation", "Animation and a Tiny Game on the Canvas"],
+        ["tk-ttk", "ttk: Themed Widgets, Treeview and Notebook"],
+        ["tk-styling", "Fonts, Colors, Images and Styling"] ] },
+    { "dir": "u06-real-apps", "id": "tk-u06-real-apps", "icon": "🏗️", "level": "Advanced", "title": "Building Real Apps", "description": "Structuring a GUI with classes, separating logic from the interface so it can be tested, a text editor project, packaging an .exe, and a database-backed capstone.",
+      "lessons": [
+        ["tk-oop", "Structuring a GUI with Classes"],
+        ["tk-separation", "Separating Logic from the Interface (and Testing It)"],
+        ["tk-project-editor", "Project: A Text Editor"],
+        ["tk-packaging", "Packaging and Sharing Your App"],
+        ["tk-capstone", "Capstone: An Expense Tracker"] ] }
+  ],
+  "pygame": [
+    { "dir": "u01-meet-pygame", "id": "pg-u01-meet-pygame", "icon": "🕹️", "level": "Beginner", "title": "Meet pygame", "description": "What pygame is and what it is for, setting it up, opening a window, and the game loop that drives every game.",
+      "lessons": [
+        ["pg-what-is", "What pygame Is and What It Is For"],
+        ["pg-first-window", "Your First pygame Window"],
+        ["pg-game-loop", "The Game Loop"] ] },
+    { "dir": "u02-input-drawing", "id": "pg-u02-input-drawing", "icon": "🎯", "level": "Beginner", "title": "Input, Drawing and Movement", "description": "Handling the keyboard and mouse, drawing shapes, Rect objects, moving things smoothly, frame-rate independence and vectors.",
+      "lessons": [
+        ["pg-events", "Events and Keyboard Input"],
+        ["pg-drawing", "Drawing Shapes and Colors"],
+        ["pg-rects", "Rects: The Workhorse"],
+        ["pg-movement", "Moving Things"],
+        ["pg-delta-time", "Frame Rate and Delta Time"],
+        ["pg-vectors", "Vectors for Games"] ] },
+    { "dir": "u03-media", "id": "pg-u03-media", "icon": "🖼️", "level": "Intermediate", "title": "Images, Text and Sound", "description": "Loading and transforming images, rendering text, playing sound and music, and animating with sprite sheets.",
+      "lessons": [
+        ["pg-images", "Images and Surfaces"],
+        ["pg-text", "Text and Fonts"],
+        ["pg-sound", "Sound and Music"],
+        ["pg-animation", "Sprite Sheets and Animation"] ] },
+    { "dir": "u04-sprites", "id": "pg-u04-sprites", "icon": "👾", "level": "Intermediate", "title": "Sprites, Collisions and a First Game", "description": "Sprite classes and groups, collision detection, timers and spawning, and your first complete game: Breakout.",
+      "lessons": [
+        ["pg-sprites", "Sprites and Groups"],
+        ["pg-collisions", "Collision Detection"],
+        ["pg-spawning", "Timers, Spawning and Randomness"],
+        ["pg-breakout", "Mini-Game: Breakout"] ] },
+    { "dir": "u05-patterns", "id": "pg-u05-patterns", "icon": "🧱", "level": "Intermediate", "title": "Game Design Patterns", "description": "Game states and scenes, menus and a HUD, tile maps and cameras, platformer physics and enemy AI with pathfinding.",
+      "lessons": [
+        ["pg-states", "Game States and Scenes"],
+        ["pg-ui", "Menus, Buttons and the HUD"],
+        ["pg-tilemaps", "Tile Maps and Scrolling Cameras"],
+        ["pg-physics", "Gravity, Jumping and Platformer Physics"],
+        ["pg-enemy-ai", "Enemy AI and Pathfinding"] ] },
+    { "dir": "u06-craft", "id": "pg-u06-craft", "icon": "✨", "level": "Advanced", "title": "Craft and Polish", "description": "Organising a game project, game feel (particles, shake, easing), saving scores and settings, performance and debugging, and packaging for Windows and the web.",
+      "lessons": [
+        ["pg-structure", "Structuring a Game Project"],
+        ["pg-juice", "Game Feel: Particles, Shake and Easing"],
+        ["pg-save-data", "Saving Scores and Settings"],
+        ["pg-performance", "Performance and Debugging"],
+        ["pg-packaging", "Packaging: Windows, the Web and Beyond"] ] },
+    { "dir": "u07-capstone", "id": "pg-u07-capstone", "icon": "🚀", "level": "Expert", "title": "Capstone: Build a Complete Game", "description": "Plan, build and finish a complete arcade shooter, Star Defender, with states, scoring, sound hooks, a high-score file and tested game logic.",
+      "lessons": [
+        ["pg-project-plan", "Planning the Game"],
+        ["pg-project-build", "Building Star Defender"],
+        ["pg-project-finish", "Polish, Ship and What Next"] ] }
   ]
 }

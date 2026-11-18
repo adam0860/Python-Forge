@@ -1,8 +1,8 @@
 # Python Forge
 
 **Learn Python from your first `print()` to advanced language features — then AI, machine
-learning and game AI — with deep, interactive lessons and a real Python interpreter built
-into the app.** Python Forge is a Windows and Android app in the spirit of Sololearn and
+learning and game AI, desktop apps with tkinter, and complete games with pygame — with deep,
+interactive lessons and a real Python interpreter built into the app.** Python Forge is a Windows and Android app in the spirit of Sololearn and
 Duolingo, with much more depth. It is a sibling of STEM Forge and C++ Forge and shares their
 engine, with a green look of its own.
 
@@ -25,8 +25,21 @@ engine, with a green look of its own.
   RLGym for Rocket League bots, self-play, imitation learning, running models in Unity and
   Unreal via ONNX) · applied projects (LLM APIs, RAG, computer vision, serving models)
 
-Every lesson is written: 126 lessons, 1,100+ practice questions, a 427-term glossary and 15
-cheat sheets (4 Python, 11 AI/ML). The outline lives in `scripts/curriculum.json`.
+- **Desktop Apps with tkinter** — 6 units, 25 lessons
+  What a GUI is and how the event loop works · widgets (labels, buttons, entries, text,
+  lists, checkbuttons, scales and more, with `ttk`) · layout with `pack`, `grid` and `place` ·
+  events, callbacks, timers and dialogs · graphics with `Canvas` and animation · real apps
+  (menus, files, a Treeview, threads and packaging)
+- **Game Development with pygame** — 7 units, 30 lessons
+  Windows, the game loop and delta time · input, drawing, `Rect` and vectors · images, text,
+  sound and animation · sprites, collisions and spawning · game states, UI, tile maps,
+  platformer physics and enemy AI · project structure, juice, save files, performance and
+  packaging · a three-lesson capstone: **Star Defender**, planned, built and polished from an
+  empty file, with a bot that play-tests it
+
+Every lesson is written: 181 lessons, 1,600+ practice questions, a 550-term glossary and 26
+cheat sheets (4 Python, 11 AI/ML, 5 tkinter, 6 pygame). The outline lives in
+`scripts/curriculum.json`.
 
 ### Where the code runs
 
@@ -34,10 +47,20 @@ cheat sheets (4 Python, 11 AI/ML). The outline lives in `scripts/curriculum.json
   standard library. The NumPy, pandas and scikit-learn examples run in the
   built-in interpreter too; those packages are **downloaded once on first use**, so the first
   run needs an internet connection and later runs do not.
+- **Practice exercises for tkinter and pygame also run in the app.** A GUI cannot open a
+  window inside a phone or a sandbox, so the in-app interpreter provides small *stand-in*
+  versions of `tkinter` and `pygame` (`Rect`, `Vector2`, `Surface`, `draw`, events, sprites,
+  `Clock` and so on, with no real screen). Write-the-code questions are checked against hidden
+  tests on those stand-ins; the lessons are written so the same code behaves identically on the
+  real libraries.
 - **"Run on your PC" examples:** PyTorch, Gymnasium, Stable-Baselines3, RLGym, ONNX Runtime,
   OpenCV, FastAPI and the LLM and embedding libraries cannot run inside a phone or a sandbox.
   Those listings are displayed with their expected output and the `pip install` line to
   run them on your own computer. The LLM examples also need your own API key.
+- **"Run on your PC" GUI programs:** the complete tkinter and pygame programs that open a
+  window (for example the finished *Star Defender* game) are shown as full listings to copy
+  into a file and run with `python file.py` on your computer (`pip install pygame` first
+  for the games; tkinter ships with Python on Windows and macOS).
 
 ## What's inside
 
@@ -86,6 +109,8 @@ Requirements: Node.js 22+ (and, for Android, Android Studio or the Android SDK +
 npm install              # also copies the Python runtime into public/pyodide/
 npm run dev              # web version with hot reload at http://localhost:5173
 npm run check            # type-check, validate all content, run every Python example
+npm run run-gui-examples # (dev tool) really run every tkinter and pygame example headlessly
+                         #   needs xvfb + a Python with tkinter, and pygame installed
 ```
 
 **Windows app** (on Windows):
@@ -114,7 +139,7 @@ be stopped by restarting the worker.
 src/
   content/              all course content as typed data (see docs/CONTENT_GUIDE.md)
     types.ts            the content model
-    python/ pyml/       one folder per unit: one file per lesson + a unit glossary
+    python/ pyml/ tkinter/ pygame/   one folder per unit: one file per lesson
     glossary/ cheatsheets/
   lib/python.ts         main-thread API for the Python runtime (run, stop, status)
   lib/pyworker.ts       the Web Worker hosting Pyodide (stdout/stderr, input(), tests)
@@ -126,6 +151,8 @@ scripts/
   validate-content.ts   structure and markup checks for every lesson
   run-examples.ts       runs every example, predict answer and code question on the
                         app's own Python (Pyodide) and fails on any mismatch
+  gui-harness.py        runs the tkinter and pygame examples headlessly (run-gui-examples)
+  sims/                 the in-app stand-ins for tkinter and pygame (`npm run gen-sims`)
   curriculum.json       the course outline; `npm run scaffold` creates stubs for new lessons
 electron/               Windows desktop shell
 android/                Android project (Capacitor)

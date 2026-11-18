@@ -6,7 +6,7 @@ runtime (src/lib/pyworker.ts):
 input() echoes what was "typed", tracebacks are trimmed to the learner's code
 ("main.py"), and tests run in the same namespace as the code.
 
-Job (JSON on stdin): {"code": str, "stdin": str|None, "tests": str|None}
+Job (JSON on stdin): {"code": str, "stdin": str|None, "tests": str|None, "setup": str|None}
 Result (JSON on stdout): {"ok", "stdout", "stderr", "tests", "message"}
 """
 import builtins
@@ -17,7 +17,7 @@ import linecache
 import sys
 import traceback
 
-def run_job(code, stdin=None, tests=None):
+def run_job(code, stdin=None, tests=None, setup=None):
     lines = (stdin or "").split("\n")
     if lines and lines[-1] == "":
         lines.pop()
@@ -42,6 +42,8 @@ def run_job(code, stdin=None, tests=None):
     if tests is not None:
         linecache.cache["tests.py"] = (len(tests), None, tests.splitlines(True), "tests.py")
     ns = {"__name__": "__main__", "__builtins__": builtins}
+    if setup:
+        exec(compile(setup, "setup.py", "exec"), ns)
     real_input = builtins.input
     builtins.input = fake_input
     try:
@@ -92,4 +94,4 @@ if __name__ == "__main__":
     if job.get("parse") is not None:
         sys.__stdout__.write(json.dumps(parse_errors(job["parse"])))
     else:
-        sys.__stdout__.write(json.dumps(run_job(job["code"], job.get("stdin"), job.get("tests"))))
+        sys.__stdout__.write(json.dumps(run_job(job["code"], job.get("stdin"), job.get("tests"), job.get("setup"))))

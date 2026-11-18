@@ -24,6 +24,22 @@ const courseMeta = {
     description:
       'From the math and data tools to classic machine learning, neural networks from scratch, PyTorch, deep learning and reinforcement learning — then putting it to work: training game-playing agents with Gymnasium, Stable-Baselines3 and RLGym, running models inside game engines, and building practical AI applications.',
   },
+  tkinter: {
+    exportName: 'tkinterCourse',
+    title: 'Desktop Apps with tkinter',
+    short: 'tkinter',
+    subtitle: 'Windows, widgets, layout, events, the canvas and real applications',
+    description:
+      'What tkinter is and what it is for, then everything needed to build real desktop programs: the event loop, widgets and tk variables, the pack, grid and place layout managers, events and callbacks, dialogs and menus, timers and threads, the canvas, themed ttk widgets, structuring and testing a GUI, packaging an .exe, and two complete projects.',
+  },
+  pygame: {
+    exportName: 'pygameCourse',
+    title: 'Game Development with pygame',
+    short: 'pygame',
+    subtitle: 'The game loop, sprites, collisions, sound, physics and a complete game',
+    description:
+      'How to make a functional game with pygame: the window and game loop, input, drawing, rects and vectors, images, text and sound, sprites and collisions, game states and menus, tile maps, platformer physics and enemy AI, polish and packaging, ending with a complete arcade shooter built step by step.',
+  },
 };
 
 const q = (s) => JSON.stringify(s);

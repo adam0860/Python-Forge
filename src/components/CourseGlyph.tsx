@@ -4,6 +4,8 @@ import type { CourseId } from '../content/types';
 const GLYPHS: Record<CourseId, { from: string; to: string; shape: 'hex' | 'circle' | 'square' | 'drop'; text: string; size: number; italic?: boolean; mono?: boolean }> = {
   python: { from: '#4ade80', to: '#15803d', shape: 'hex', text: '>>>', size: 17, mono: true },
   pyml: { from: '#2dd4bf', to: '#0e7490', shape: 'circle', text: '∇', size: 30 },
+  tkinter: { from: '#60a5fa', to: '#1d4ed8', shape: 'square', text: '▢', size: 30 },
+  pygame: { from: '#fbbf24', to: '#b45309', shape: 'drop', text: '◆', size: 24 },
 };
 
 /** Course emblems: a coloured badge with the course's signature symbol. */

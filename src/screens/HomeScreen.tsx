@@ -252,6 +252,8 @@ function Onboarding() {
             [
               ['python', 'Start with Python', 'Beginner to Advanced — recommended unless you already write Python comfortably'],
               ['pyml', 'I already know Python', 'Jump straight to Python for AI & Machine Learning'],
+              ['tkinter', 'I want to build desktop apps', 'Windows, buttons and forms with tkinter (basic Python helps)'],
+              ['pygame', 'I want to make games', 'Build a complete game with pygame (basic Python helps)'],
             ] as const
           ).map(([id, title, sub]) => (
             <button key={id} type="button" className={`choice${path === id ? ' on' : ''}`} onClick={() => setPath(id)}>

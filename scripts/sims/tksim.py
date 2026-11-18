@@ -1,0 +1,2499 @@
+# ---------------------------------------------------------------------------
+# A tiny stand-in for tkinter that runs anywhere (including in the browser).
+# It RECORDS the widgets your program creates instead of drawing them, so code
+# written for real tkinter can be run and checked without a screen. mainloop()
+# prints the widget tree. Behaviour follows the real library for the parts used
+# in the lessons; this is not a complete implementation of tkinter.
+# ---------------------------------------------------------------------------
+import sys as _sys
+import enum as _enum
+import types as _types
+import math as _math
+import re as _re
+
+class TclError(Exception):
+    pass
+
+END = 'end'; INSERT = 'insert'; CURRENT = 'current'; ANCHOR = 'anchor'; ALL = 'all'; SEL = 'sel'
+SEL_FIRST = 'sel.first'; SEL_LAST = 'sel.last'
+LEFT = 'left'; RIGHT = 'right'; TOP = 'top'; BOTTOM = 'bottom'; CENTER = 'center'
+N = 'n'; S = 's'; E = 'e'; W = 'w'; NW = 'nw'; NE = 'ne'; SW = 'sw'; SE = 'se'
+NS = 'ns'; EW = 'ew'; NSEW = 'nsew'
+X = 'x'; Y = 'y'; BOTH = 'both'; NONE = 'none'
+NORMAL = 'normal'; DISABLED = 'disabled'; ACTIVE = 'active'; HIDDEN = 'hidden'
+HORIZONTAL = 'horizontal'; VERTICAL = 'vertical'
+WORD = 'word'; CHAR = 'char'
+SINGLE = 'single'; BROWSE = 'browse'; MULTIPLE = 'multiple'; EXTENDED = 'extended'
+RAISED = 'raised'; SUNKEN = 'sunken'; FLAT = 'flat'; RIDGE = 'ridge'; GROOVE = 'groove'; SOLID = 'solid'
+YES = TRUE = True; NO = FALSE = False
+INSIDE = 'inside'; OUTSIDE = 'outside'
+FIRST = 'first'; LAST = 'last'; ROUND = 'round'
+PIESLICE = 'pieslice'; CHORD = 'chord'; ARC = 'arc'
+_TKCLASS = {'Frame': 'Frame', 'LabelFrame': 'Labelframe', 'Label': 'Label', 'Button': 'Button', 'Checkbutton': 'Checkbutton',
+            'Radiobutton': 'Radiobutton', 'Entry': 'Entry', 'Text': 'Text', 'Scale': 'Scale', 'Spinbox': 'Spinbox', 'Listbox': 'Listbox',
+            'Canvas': 'Canvas', 'Menu': 'Menu', 'Scrollbar': 'Scrollbar', 'Toplevel': 'Toplevel',
+            'ttk.Frame': 'TFrame', 'ttk.Label': 'TLabel', 'ttk.Button': 'TButton', 'ttk.Entry': 'TEntry', 'ttk.Checkbutton': 'TCheckbutton',
+            'ttk.Radiobutton': 'TRadiobutton', 'ttk.Combobox': 'TCombobox', 'ttk.Progressbar': 'TProgressbar', 'ttk.Notebook': 'TNotebook',
+            'ttk.Treeview': 'Treeview', 'ttk.Scale': 'TScale', 'ttk.Scrollbar': 'TScrollbar', 'ttk.Spinbox': 'TSpinbox',
+            'ttk.Labelframe': 'TLabelframe', 'ttk.Separator': 'TSeparator', 'ttk.Panedwindow': 'TPanedwindow'}
+TkVersion = 8.6
+TclVersion = 8.6
+
+_default_root = None
+_var_counter = [0]
+_NO_DEFAULT = object()
+
+def _get_root():
+    return _default_root if _default_root is not None else Tk()
+
+# ----------------------------------------------------------------- variables
+_pack_counter = [0]
+
+class Variable:
+    _default = ''
+    def __init__(self, master=None, value=None, name=None):
+        if master is None and _default_root is None:
+            raise RuntimeError('Too early to create variable: no default root window')
+        self._root = master or _get_root()
+        if name is None:
+            name = 'PY_VAR%d' % _var_counter[0]
+            _var_counter[0] += 1
+        self._name = name
+        self._value = self._default
+        self._traces = []
+        if value is not None:
+            self._value = self._coerce_in(value)
+    def _coerce_in(self, v):
+        return v
+    def _coerce_out(self, v):
+        return v
+    def __str__(self):
+        return self._name
+    def set(self, value):
+        self._value = self._coerce_in(value)
+        self._fire('write')
+    def initialize(self, value):
+        self.set(value)
+    def get(self):
+        self._fire('read')
+        return self._coerce_out(self._value)
+    def _fire(self, mode):
+        for modes, cbname, cb in list(self._traces):
+            if mode in modes:
+                _safe(self, cb, self._name, '', mode)
+    def trace_add(self, mode, callback):
+        modes = (mode,) if isinstance(mode, str) else tuple(mode)
+        for m in modes:
+            if m not in ('array', 'read', 'write', 'unset'):
+                raise TclError('bad operation "%s": must be array, read, unset, or write' % m)
+        cbname = '%scallit' % (id(callback) % 100000)
+        self._traces.append((modes, cbname, callback))
+        return cbname
+    def trace_remove(self, mode, cbname):
+        modes = (mode,) if isinstance(mode, str) else tuple(mode)
+        self._traces = [t for t in self._traces if not (t[1] == cbname and t[0] == modes)]
+    def trace_info(self):
+        return [(t[0], t[1]) for t in self._traces]
+    trace = trace_variable = None
+
+class StringVar(Variable):
+    _default = ''
+    def _coerce_in(self, v):
+        return v if isinstance(v, str) else str(v)
+
+class IntVar(Variable):
+    _default = 0
+    def _coerce_out(self, v):
+        if isinstance(v, bool):
+            return int(v)
+        if isinstance(v, int):
+            return v
+        try:
+            return int(str(v).strip())
+        except ValueError:
+            try:
+                return int(float(str(v).strip()))
+            except ValueError:
+                raise TclError('expected floating-point number but got "%s"' % (v,)) from None
+
+class DoubleVar(Variable):
+    _default = 0.0
+    def _coerce_out(self, v):
+        try:
+            return float(v)
+        except ValueError:
+            raise TclError('expected floating-point number but got "%s"' % (v,)) from None
+
+class BooleanVar(Variable):
+    _default = False
+    def _coerce_in(self, v):
+        if isinstance(v, str):
+            low = v.strip().lower()
+            if low in ('1', 'true', 'yes', 'on'):
+                return True
+            if low in ('0', 'false', 'no', 'off'):
+                return False
+            raise TclError('expected boolean value but got "%s"' % v)
+        return bool(v)
+    def _coerce_out(self, v):
+        return bool(v)
+
+def _safe(w, func, *args):
+    # like tkinter's CallWrapper: an exception in a callback is reported, not raised
+    try:
+        return func(*args)
+    except Exception:
+        exc, val, tb = _sys.exc_info()
+        w._root.report_callback_exception(exc, val, tb)
+        return None
+
+def _tcl_str(v):
+    # how Tcl would hold the value: booleans are stored as 1 / 0
+    if isinstance(v, bool):
+        return '1' if v else '0'
+    return str(v)
+
+def _val_of(v):
+    return v.get() if isinstance(v, Variable) else v
+
+# ------------------------------------------------------------------- events
+class EventType(str, _enum.Enum):
+    KeyPress = '2'
+    Key = KeyPress
+    KeyRelease = '3'
+    ButtonPress = '4'
+    Button = ButtonPress
+    ButtonRelease = '5'
+    Motion = '6'
+    Enter = '7'
+    Leave = '8'
+    FocusIn = '9'
+    FocusOut = '10'
+    Configure = '22'
+    MouseWheel = '38'
+    VirtualEvent = '35'
+    def __str__(self):
+        return self.name
+
+class Event:
+    def __repr__(self):
+        return '<Event %s>' % ' '.join('%s=%r' % kv for kv in sorted(self.__dict__.items()))
+
+_MOD_BITS = {'Shift': 1, 'Lock': 2, 'Control': 4, 'Alt': 131072, 'Mod1': 8, 'B1': 256, 'B2': 512, 'B3': 1024, 'Button1': 256, 'Button2': 512, 'Button3': 1024}
+_KEY_CHARS = {'Return': '\r', 'Tab': '\t', 'BackSpace': '\x08', 'Escape': '\x1b', 'Delete': '\x7f', 'space': ' ',
+              'question': '?', 'exclam': '!', 'period': '.', 'comma': ',', 'plus': '+', 'minus': '-', 'slash': '/', 'equal': '='}
+_KEY_NUMS = {'Return': 65293, 'Tab': 65289, 'BackSpace': 65288, 'Escape': 65307, 'Delete': 65535, 'space': 32,
+             'Left': 65361, 'Up': 65362, 'Right': 65363, 'Down': 65364, 'Home': 65360, 'End': 65367,
+             'Prior': 65365, 'Next': 65366, 'Insert': 65379, 'question': 63, 'exclam': 33, 'period': 46, 'comma': 44}
+for _i in range(1, 13):
+    _KEY_NUMS['F%d' % _i] = 65469 + _i
+
+def _parse_seq(seq, allow_multi=False):
+    """-> (kind, mods, detail). kind is Key, KeyRelease, Button, ButtonRelease, Motion, Enter, ... or Virtual."""
+    seq = str(seq)
+    if seq.startswith('<<') and seq.endswith('>>'):
+        return ('Virtual', (), seq[2:-2])
+    if len(seq) == 1:
+        return ('Key', (), seq)
+    if not (seq.startswith('<') and seq.endswith('>')):
+        raise TclError('bad event type or keysym "%s"' % seq)
+    parts = seq[1:-1].split('-')
+    mods = []
+    multi = False
+    while len(parts) > 1 and (parts[0] in _MOD_BITS or parts[0] in ('Double', 'Triple', 'Quadruple', 'Any')):
+        m = parts.pop(0)
+        if m in ('Double', 'Triple', 'Quadruple'):
+            if not allow_multi:
+                raise TclError('Double, Triple, or Quadruple modifier not allowed')
+            multi = True
+        if m != 'Any':
+            mods.append(m)
+    head = parts[0]
+    detail = '-'.join(parts[1:]) if len(parts) > 1 else None
+    if multi:
+        return ('Multi', tuple(mods), detail)
+    if head in ('Key', 'KeyPress'):
+        return ('Key', tuple(mods), detail)
+    if head == 'KeyRelease':
+        return ('KeyRelease', tuple(mods), detail)
+    if head in ('Button', 'ButtonPress'):
+        return ('Button', tuple(mods), detail)
+    if head == 'ButtonRelease':
+        return ('ButtonRelease', tuple(mods), detail)
+    if head in ('Motion', 'Enter', 'Leave', 'FocusIn', 'FocusOut', 'MouseWheel', 'Configure', 'Map', 'Unmap', 'Destroy', 'Visibility', 'Expose'):
+        return (head, tuple(mods), detail)
+    if len(parts) == 1 and head.isdigit():
+        return ('Button', tuple(mods), head)
+    if len(parts) == 1:
+        return ('Key', tuple(mods), head)
+    raise TclError('bad event type or keysym "%s"' % head)
+
+def _mods_state(mods):
+    st = 0
+    for m in mods:
+        st |= _MOD_BITS[m]
+    return st
+
+def _make_event(widget, seq, kw):
+    kind, mods, detail = _parse_seq(seq)
+    e = Event()
+    e.serial = 0
+    e.num = '??'
+    e.height = '??'
+    e.keycode = '??'
+    e.state = _mods_state(mods)
+    e.time = 0
+    e.width = '??'
+    e.x = 0
+    e.y = 0
+    e.char = '??'
+    e.send_event = False
+    e.keysym = '??'
+    e.keysym_num = '??'
+    e.type = EventType.VirtualEvent
+    e.widget = widget
+    e.x_root = 0
+    e.y_root = 0
+    e.delta = 0
+    if kind in ('Key', 'KeyRelease'):
+        keysym = kw.get('keysym', detail)
+        if keysym is None:
+            keysym = 'a'
+        if 'Shift' in mods and len(keysym) == 1 and keysym.islower():
+            keysym = keysym.upper()
+        e.type = EventType.KeyPress if kind == 'Key' else EventType.KeyRelease
+        e.keysym = keysym
+        e.keycode = 0
+        e.x, e.y = -1, -1
+        if len(keysym) == 1:
+            ch = keysym
+            e.keysym_num = ord(keysym)
+            if keysym.isupper() or keysym in '?!@#$%^&*()_+{}|:"<>~':
+                e.state |= 1
+        else:
+            ch = _KEY_CHARS.get(keysym, '')
+            e.keysym_num = _KEY_NUMS.get(keysym, 0)
+            if keysym in ('question', 'exclam'):
+                e.state |= 1
+            if ch == '?' or ch == '!':
+                e.keysym_num = ord(ch)
+        if 'Control' in mods and len(keysym) == 1 and keysym.isalpha():
+            ch = chr(ord(keysym.lower()) - 96)
+        e.char = '' if kind == 'KeyRelease' else ch
+    elif kind in ('Button', 'ButtonRelease'):
+        e.type = EventType.ButtonPress if kind == 'Button' else EventType.ButtonRelease
+        e.num = int(kw.get('button', detail if detail is not None else 1))
+    elif kind == 'Motion':
+        e.type = EventType.Motion
+    elif kind == 'Enter':
+        e.type = EventType.Enter
+        e.focus = False
+    elif kind == 'Leave':
+        e.type = EventType.Leave
+        e.focus = False
+    elif kind == 'MouseWheel':
+        e.type = EventType.MouseWheel
+    elif kind == 'FocusIn':
+        e.type = EventType.FocusIn
+    elif kind == 'FocusOut':
+        e.type = EventType.FocusOut
+    for k in ('x', 'y', 'delta', 'state', 'x_root', 'y_root'):
+        if k in kw:
+            setattr(e, k, int(kw[k]))
+    if 'rootx' in kw:
+        e.x_root = int(kw['rootx'])
+    if 'rooty' in kw:
+        e.y_root = int(kw['rooty'])
+    return e
+
+def _binding_matches(bseq, ev_kind, ev_detail, ev_state):
+    try:
+        kind, mods, detail = _parse_seq(bseq, True)
+    except TclError:
+        return None
+    if kind != ev_kind:
+        return None
+    if kind == 'Virtual':
+        return (1, 0) if detail == ev_detail else None
+    if detail is not None and str(detail) != str(ev_detail):
+        return None
+    need = _mods_state(mods)
+    if need & ~ev_state:
+        return None
+    return (1 if detail is not None else 0, len(mods))
+
+# ------------------------------------------------------------------- widgets
+def _sticky(s):
+    s = str(s)
+    for c in s:
+        if c not in 'nesw ,':
+            raise TclError('bad stickyness value "%s": must be a string containing n, e, s, and/or w' % s)
+    return ''.join(c for c in 'nesw' if c in s)
+
+def _flat(coords):
+    out = []
+    for c in coords:
+        if isinstance(c, (list, tuple)):
+            out.extend(_flat(c))
+        else:
+            out.append(float(c))
+    return out
+
+def _abbrev(opts, valid, msg):
+    out = {}
+    for k, v in opts.items():
+        kk = 'in' if k == 'in_' else k
+        if kk not in valid:
+            hits = [o for o in valid if o.startswith(kk)]
+            if len(hits) != 1:
+                raise TclError(msg % k)
+            kk = hits[0]
+        out[kk] = v
+    return out
+
+class Misc:
+    _kind = 'Frame'
+    _is_toplevel = False
+
+    # -- construction -------------------------------------------------------
+    def _setup(self, master, cnf, kw, name=None):
+        global _default_root
+        self.master = master
+        self.children = {}
+        self._last_child_ids = {}
+        self._mgr = None
+        self._layout = {}
+        self._bindings = {}
+        self._afters = []
+        self._destroyed = False
+        self._grid_cfg = {'row': {}, 'column': {}}
+        opts = dict(cnf or {})
+        opts.update(kw)
+        names, defaults, aliases = self._table()
+        self._optvals = {}
+        for k, v in opts.items():
+            self._set_opt(k, v)
+        if master is None:
+            self._w = '.'
+            self._tkname = '.'
+        else:
+            base = (name or self.__class__.__name__).lower()
+            count = master._last_child_ids.get(base, 0) + 1
+            master._last_child_ids[base] = count
+            nm = '!%s' % base if count == 1 else '!%s%d' % (base, count)
+            self._w = (master._w if master._w != '.' else '') + '.' + nm
+            self._tkname = nm
+            master.children[nm] = self
+        self._root = master._root if master is not None else self
+
+    def _table(self):
+        return _OPTS[self._kind]
+
+    def _set_opt(self, key, value):
+        k = self._resolve(key)
+        if k in _WIDGET_COLOR_OPTS and isinstance(value, str):
+            _check_color(value, allow_empty=False)
+        self._optvals[k] = value
+        self._on_option(k, value)
+
+    def _on_option(self, key, value):
+        pass
+
+    def __str__(self):
+        return self._w
+    def __repr__(self):
+        return '<tkinter.%s object %s>' % (self.__class__.__name__, self._w)
+
+    # -- options ------------------------------------------------------------
+    def configure(self, cnf=None, **kw):
+        if isinstance(cnf, str):
+            return self.cget(cnf)
+        if cnf is None and not kw:
+            names, defaults, aliases = self._table()
+            return {k: (k, k, k, defaults.get(k, ''), self.cget(k)) for k in names.split()}
+        opts = dict(cnf or {})
+        opts.update(kw)
+        for k, v in opts.items():
+            self._set_opt(k, v)
+    config = configure
+
+    def _resolve(self, key):
+        names, defaults, aliases = self._table()
+        key = key.rstrip('_') if key.endswith('_') else key
+        key = aliases.get(key, key)
+        opts = names.split()
+        if key in opts:
+            return key
+        hits = [o for o in opts if o.startswith(key)] if key else []
+        if len(hits) == 1:
+            return hits[0]
+        raise TclError('unknown option "-%s"' % key)
+
+    def cget(self, key):
+        names, defaults, aliases = self._table()
+        k = self._resolve(key)
+        if k == 'text' and isinstance(self._optvals.get('textvariable'), Variable) and self._kind in ('Label', 'Button', 'ttk.Label', 'ttk.Button'):
+            return str(self._optvals['textvariable'].get())
+        if k in self._optvals:
+            v = self._optvals[k]
+            if isinstance(v, Variable):
+                return str(v)
+            if callable(v):
+                return '%scallit' % (id(v) % 100000)
+            return v
+        return defaults.get(k, '')
+    __getitem__ = cget
+    def __setitem__(self, key, value):
+        self._set_opt(key, value)
+    def keys(self):
+        return sorted(self._table()[0].split())
+
+    # -- tree ----------------------------------------------------------------
+    def winfo_children(self):
+        return list(self.children.values())
+    def winfo_name(self):
+        return self._tkname
+    def winfo_class(self):
+        return _TKCLASS.get(self._kind, self.__class__.__name__) if self is not self._root else 'Tk'
+    def winfo_parent(self):
+        return str(self.master) if self.master is not None else ''
+    def winfo_toplevel(self):
+        w = self
+        while w.master is not None and not w._is_toplevel:
+            w = w.master
+        return w
+    def winfo_exists(self):
+        if self._root._destroyed:
+            raise TclError("can't invoke \"winfo\" command: application has been destroyed")
+        return 0 if self._destroyed else 1
+    def winfo_manager(self):
+        return self._mgr or ''
+    def winfo_screenwidth(self):
+        return 1920
+    def winfo_screenheight(self):
+        return 1080
+    def winfo_reqwidth(self):
+        try:
+            return int(float(self.cget('width'))) + 2
+        except Exception:
+            return 1
+    def winfo_reqheight(self):
+        try:
+            return int(float(self.cget('height'))) + 2
+        except Exception:
+            return 1
+    def winfo_width(self):
+        wh = getattr(self, '_wh', None)
+        return wh[0] if wh else 1
+    def winfo_height(self):
+        wh = getattr(self, '_wh', None)
+        return wh[1] if wh else 1
+    def nametowidget(self, name):
+        w = self._root
+        for part in str(name).split('.'):
+            if part:
+                w = w.children[part]
+        return w
+    def destroy(self):
+        for c in list(self.children.values()):
+            c.destroy()
+        self._destroyed = True
+        if self.master is not None:
+            self.master.children.pop(self._tkname, None)
+        elif self is self._root:
+            global _default_root
+            if _default_root is self:
+                _default_root = None
+
+    # -- events / focus -------------------------------------------------------
+    def bind(self, sequence=None, func=None, add=None):
+        if sequence is None:
+            return tuple(self._bindings)
+        if func is None:
+            return '' if sequence not in self._bindings else 'if {"[%s %%# ...]" == "break"} break' % (id(self._bindings[sequence][-1]) % 100000)
+        _parse_seq(sequence, True)
+        if add in ('+', True):
+            self._bindings.setdefault(sequence, []).append(func)
+        else:
+            self._bindings[sequence] = [func]
+        return '%scallit' % (id(func) % 100000)
+    def unbind(self, sequence, funcid=None):
+        self._bindings.pop(sequence, None)
+    def bind_all(self, sequence=None, func=None, add=None):
+        r = self._root
+        if not hasattr(r, '_all_bindings'):
+            r._all_bindings = {}
+        if sequence is None:
+            return tuple(r._all_bindings)
+        if func is None:
+            return '' if sequence not in r._all_bindings else 'if {"[%s %%# ...]" == "break"} break' % (id(r._all_bindings[sequence][-1]) % 100000)
+        _parse_seq(sequence, True)
+        if add in ('+', True):
+            r._all_bindings.setdefault(sequence, []).append(func)
+        else:
+            r._all_bindings[sequence] = [func]
+        return '%scallit' % (id(func) % 100000)
+    def unbind_all(self, sequence):
+        getattr(self._root, '_all_bindings', {}).pop(sequence, None)
+    def bind_class(self, cls, sequence=None, func=None, add=None):
+        r = self._root
+        if not hasattr(r, '_class_bindings'):
+            r._class_bindings = {}
+        table = r._class_bindings.setdefault(cls, {})
+        if sequence is None:
+            return tuple(table)
+        if func is None:
+            return ''
+        _parse_seq(sequence, True)
+        if add in ('+', True):
+            table.setdefault(sequence, []).append(func)
+        else:
+            table[sequence] = [func]
+        return '%scallit' % (id(func) % 100000)
+    def _run_tag(self, table, ev, kind, detail):
+        best = None
+        for bseq, funcs in table.items():
+            score = _binding_matches(bseq, kind, detail, ev.state)
+            if score is not None and (best is None or score > best[0]):
+                best = (score, funcs)
+        if best is None:
+            return False
+        for f in list(best[1]):
+            if _safe(self, f, ev) == 'break':
+                return True
+        return False
+    def event_generate(self, sequence, **kw):
+        kind, mods, detail = _parse_seq(sequence)
+        target = self
+        if kind in ('Key', 'KeyRelease'):
+            foc = getattr(self._root, '_focus', None)
+            if isinstance(foc, Misc) and not foc._destroyed:
+                target = foc
+        ev = _make_event(target, sequence, kw)
+        if kind == 'Virtual':
+            ev_detail = detail
+        elif kind in ('Key', 'KeyRelease'):
+            ev_detail = ev.keysym
+        elif kind in ('Button', 'ButtonRelease'):
+            ev_detail = str(ev.num)
+        else:
+            ev_detail = None
+        if kind in ('Motion',) and 'B1' in mods:
+            ev.state |= 256
+        tags = [target._bindings,
+                getattr(target._root, '_class_bindings', {}).get(target.winfo_class(), {})]
+        if kind in ('Button', 'ButtonRelease', 'Motion') and hasattr(target, '_item_tables'):
+            tags = target._item_tables(ev) + tags
+        top = target.winfo_toplevel()
+        if top is not target:
+            tags.append(top._bindings)
+        tags.append(getattr(target._root, '_all_bindings', {}))
+        for table in tags:
+            if self._run_tag(table, ev, kind, ev_detail):
+                break
+    def event_add(self, virtual, *sequences):
+        pass
+    def event_delete(self, virtual, *sequences):
+        pass
+    def focus_set(self):
+        self._root._focus = self
+    focus = focus_force = focus_set
+    def focus_get(self):
+        return getattr(self._root, '_focus', None)
+    def update(self):
+        r = self._root
+        for _ in range(100):
+            due = [a for a in r._afters if a[1] <= 0]
+            if not due:
+                break
+            r._afters = [a for a in r._afters if a[1] > 0]
+            for ident, ms, func, args in due:
+                _safe(self, func, *args)
+    def update_idletasks(self):
+        pass
+    def grab_set(self):
+        pass
+    grab_release = grab_set
+    def lift(self, *a):
+        pass
+    tkraise = lift
+    def lower(self, *a):
+        pass
+    def option_add(self, *a, **k):
+        pass
+    def bell(self):
+        pass
+    def clipboard_clear(self):
+        self._root._clip = ''
+    def clipboard_append(self, text):
+        self._root._clip = getattr(self._root, '_clip', '') + text
+    def clipboard_get(self):
+        return getattr(self._root, '_clip', '')
+
+    # -- timers (recorded, never fired in the stand-in) -------------------------
+    def after(self, ms, func=None, *args):
+        r = self._root
+        if isinstance(ms, str):
+            try:
+                ms = int(ms)
+            except ValueError:
+                raise TclError('bad argument "%s": must be cancel, idle, info, or an integer' % ms)
+        r._after_n = getattr(r, '_after_n', 0) + 1
+        ident = 'after#%d' % r._after_n
+        r._afters.append((ident, ms, func, args))
+        return ident
+    def after_idle(self, func, *args):
+        return self.after(0, func, *args)
+    def after_cancel(self, ident):
+        r = self._root
+        if not ident:
+            raise ValueError('id must be a valid identifier returned from after or after_idle')
+        r._afters = [a for a in r._afters if a[0] != ident]
+
+    # -- geometry managers -----------------------------------------------------
+    def _claim(self, which):
+        m = self.master
+        if m is None:
+            raise TclError("can't %s %s: it's a top-level window" % (which, self))
+        others = []
+        if which in ('pack', 'grid'):
+            # only pack and grid conflict; place can be mixed with either
+            others = sorted({c._mgr for c in m.children.values() if c is not self and c._mgr in ('pack', 'grid') and c._mgr != which})
+        if others:
+            raise TclError('cannot use geometry manager %s inside %s which already has slaves managed by %s' % (which, m, others[0]))
+        self._mgr = which
+
+    def pack_configure(self, cnf=None, **kw):
+        opts = dict(cnf or {})
+        opts.update(kw)
+        valid = ('after', 'anchor', 'before', 'expand', 'fill', 'in', 'ipadx', 'ipady', 'padx', 'pady', 'side')
+        opts = _abbrev(opts, valid, 'bad option "-%s": must be -after, -anchor, -before, -expand, -fill, -in, -ipadx, -ipady, -padx, -pady, or -side')
+        if 'side' in opts and opts['side'] not in ('top', 'bottom', 'left', 'right'):
+            raise TclError('bad side "%s": must be top, bottom, left, or right' % opts['side'])
+        if 'fill' in opts and opts['fill'] not in ('none', 'x', 'y', 'both'):
+            raise TclError('bad fill style "%s": must be none, x, y, or both' % opts['fill'])
+        self._claim('pack')
+        if self._layout.get('_m') != 'pack':
+            _pack_counter[0] += 1
+            self._packseq = _pack_counter[0]
+        cur = dict(self._layout) if self._layout.get('_m') == 'pack' else {}
+        cur.update(opts)
+        cur['_m'] = 'pack'
+        self._layout = cur
+    pack = configure_pack = pack_configure
+
+    def pack_info(self):
+        l = self._layout
+        if self._mgr != 'pack':
+            raise TclError('window "%s" isn\'t packed' % self)
+        return {'in': self.master, 'anchor': l.get('anchor', 'center'), 'expand': int(bool(l.get('expand', 0))),
+                'fill': l.get('fill', 'none'), 'ipadx': l.get('ipadx', 0), 'ipady': l.get('ipady', 0),
+                'padx': l.get('padx', 0), 'pady': l.get('pady', 0), 'side': l.get('side', 'top')}
+
+    def grid_configure(self, cnf=None, **kw):
+        opts = dict(cnf or {})
+        opts.update(kw)
+        valid = ('column', 'columnspan', 'in', 'ipadx', 'ipady', 'padx', 'pady', 'row', 'rowspan', 'sticky')
+        opts = _abbrev(opts, valid, 'bad option "-%s": must be -column, -columnspan, -in, -ipadx, -ipady, -padx, -pady, -row, -rowspan, or -sticky')
+        self._claim('grid')
+        if self._layout.get('_m') == 'grid':
+            cur = dict(self._layout)
+        else:
+            cur = dict(getattr(self, '_removed_grid', None) or {})
+        self._removed_grid = None
+        if 'row' not in opts and 'row' not in cur:
+            used = [c._layout.get('row', 0) + c._layout.get('rowspan', 1) for c in self.master.children.values()
+                    if c is not self and c._mgr == 'grid']
+            opts['row'] = max(used) if used else 0
+        cur.update(opts)
+        if 'sticky' in cur:
+            cur['sticky'] = _sticky(cur['sticky'])
+        cur['_m'] = 'grid'
+        self._layout = cur
+    grid = grid_configure
+
+    def grid_info(self):
+        if self._mgr != 'grid':
+            raise TclError('window "%s" isn\'t managed by grid' % self)
+        l = self._layout
+        return {'in': self.master, 'column': l.get('column', 0), 'row': l.get('row', 0), 'columnspan': l.get('columnspan', 1),
+                'rowspan': l.get('rowspan', 1), 'ipadx': l.get('ipadx', 0), 'ipady': l.get('ipady', 0),
+                'padx': l.get('padx', 0), 'pady': l.get('pady', 0), 'sticky': l.get('sticky', '')}
+
+    def place_configure(self, cnf=None, **kw):
+        opts = dict(cnf or {})
+        opts.update(kw)
+        valid = ('anchor', 'bordermode', 'height', 'in', 'relheight', 'relwidth', 'relx', 'rely', 'width', 'x', 'y')
+        opts = _abbrev(opts, valid, 'unknown option "-%s"')
+        for k in ('x', 'y', 'width', 'height'):
+            if k in opts and opts[k] != '':
+                v = str(opts[k])
+                import re as _re
+                if not _re.fullmatch(r'-?(\d+\.?\d*|\.\d+)[cimp]?', v):
+                    raise TclError('bad screen distance "%s"' % v)
+        for k in ('relx', 'rely', 'relwidth', 'relheight'):
+            if k in opts and opts[k] != '':
+                try:
+                    float(opts[k])
+                except (TypeError, ValueError):
+                    raise TclError('expected floating-point number but got "%s"' % (opts[k],)) from None
+        self._claim('place')
+        cur = dict(self._layout) if self._layout.get('_m') == 'place' else {}
+        cur.update(opts)
+        cur['_m'] = 'place'
+        self._layout = cur
+    place = place_configure
+
+    def place_info(self):
+        if self._mgr != 'place':
+            return {}
+        l = self._layout
+        return {k: str(v) for k, v in l.items() if k != '_m'}
+
+    def _forget(self):
+        self._mgr = None
+        self._layout = {}
+    def pack_forget(self):
+        self._forget()
+    def grid_forget(self):
+        self._removed_grid = None
+        self._forget()
+    def grid_remove(self):
+        saved = dict(self._layout) if self._layout.get('_m') == 'grid' else None
+        self._forget()
+        self._removed_grid = saved
+    def place_forget(self):
+        self._forget()
+    forget = pack_forget
+
+    def pack_slaves(self):
+        return sorted([c for c in self.children.values() if c._mgr == 'pack'], key=lambda c: getattr(c, '_packseq', 0))
+    def grid_slaves(self, row=None, column=None):
+        out = [c for c in self.children.values() if c._mgr == 'grid']
+        if row is not None:
+            out = [c for c in out if c._layout.get('row', 0) == row]
+        if column is not None:
+            out = [c for c in out if c._layout.get('column', 0) == column]
+        return list(reversed(out))
+    def place_slaves(self):
+        return [c for c in self.children.values() if c._mgr == 'place']
+    def slaves(self):
+        return self.pack_slaves()
+
+    def _gridcfg(self, which, index, cnf, kw):
+        opts = dict(cnf or {})
+        opts.update(kw)
+        d = self._grid_cfg[which].setdefault(index, {'minsize': 0, 'pad': 0, 'uniform': None, 'weight': 0})
+        for k, v in opts.items():
+            if k not in d:
+                raise TclError('invalid arg "-%s": should be -minsize, -pad, -uniform, or -weight' % k)
+            d[k] = v
+        return None if opts else dict(d)
+    def grid_columnconfigure(self, index, cnf=None, **kw):
+        return self._gridcfg('column', index, cnf, kw)
+    def grid_rowconfigure(self, index, cnf=None, **kw):
+        return self._gridcfg('row', index, cnf, kw)
+    columnconfigure = grid_columnconfigure
+    rowconfigure = grid_rowconfigure
+    def grid_propagate(self, flag=None):
+        return True if flag is None else None
+    pack_propagate = grid_propagate
+    def grid_size(self):
+        cells = [c for c in self.children.values() if c._mgr == 'grid']
+        cols = max([c._layout.get('column', 0) + c._layout.get('columnspan', 1) for c in cells] or [0])
+        rows = max([c._layout.get('row', 0) + c._layout.get('rowspan', 1) for c in cells] or [0])
+        return (cols, rows)
+
+
+def _ret(v):
+    if v is None:
+        return 'None'
+    return v if isinstance(v, (int, float, str)) else str(v)
+
+def _text_of(w):
+    tv = w._optvals.get('textvariable')
+    if isinstance(tv, Variable):
+        return str(tv.get())
+    return str(w._optvals.get('text', ''))
+
+class _Button:
+    def _disabled(self):
+        return self._optvals.get('state') == 'disabled' or 'disabled' in getattr(self, '_flags', ())
+    def invoke(self):
+        if self._disabled():
+            return ''
+        cmd = self._optvals.get('command')
+        return _ret(_safe(self, cmd)) if cmd else ''
+    def flash(self):
+        pass
+
+class Widget(Misc):
+    pass
+
+class Frame(Widget):
+    _kind = 'Frame'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+
+class LabelFrame(Frame):
+    _kind = 'LabelFrame'
+class Label(Widget):
+    _kind = 'Label'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+class Button(Widget, _Button):
+    _kind = 'Button'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+
+class Checkbutton(Widget, _Button):
+    _kind = 'Checkbutton'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+        if 'variable' not in self._optvals:
+            self._optvals['variable'] = _own_var(self)
+    def _var(self):
+        return self._optvals['variable']
+    def _on(self):
+        return self._optvals.get('onvalue', 1)
+    def _off(self):
+        return self._optvals.get('offvalue', 0)
+    def select(self):
+        self._var().set(self._on())
+    def deselect(self):
+        self._var().set(self._off())
+    def toggle(self):
+        v = self._var()
+        cur = v._value
+        if _tcl_str(cur) == _tcl_str(self._on()):
+            self.deselect()
+        else:
+            self.select()
+    def invoke(self):
+        if self._disabled():
+            return ''
+        self.toggle()
+        cmd = self._optvals.get('command')
+        return _ret(_safe(self, cmd)) if cmd else ''
+
+class Radiobutton(Widget, _Button):
+    _kind = 'Radiobutton'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+        if 'variable' not in self._optvals:
+            self._optvals['variable'] = _shared_radio_var(self._root)
+    def select(self):
+        self._optvals['variable'].set(self._optvals.get('value', ''))
+    def deselect(self):
+        v = self._optvals['variable']
+        if _tcl_str(v._value) == _tcl_str(self._optvals.get('value', '')):
+            v.set('')
+    def invoke(self):
+        if self._disabled():
+            return ''
+        self.select()
+        cmd = self._optvals.get('command')
+        return _ret(_safe(self, cmd)) if cmd else ''
+
+def _own_var(w):
+    return StringVar(w._root, name=None)
+def _shared_radio_var(root):
+    if not hasattr(root, '_radio_var'):
+        root._radio_var = StringVar(root, name='selectedButton')
+    return root._radio_var
+
+class Entry(Widget):
+    _kind = 'Entry'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._text = ''
+        self._setup(master or _get_root(), cnf, kw)
+        tv = self._optvals.get('textvariable')
+        if isinstance(tv, Variable) and tv._value not in ('', None):
+            pass
+    def _cur(self):
+        tv = self._optvals.get('textvariable')
+        return _tcl_str(tv._value) if isinstance(tv, Variable) else self._text
+    def _store(self, s):
+        tv = self._optvals.get('textvariable')
+        if isinstance(tv, Variable):
+            tv.set(s)
+        else:
+            self._text = s
+    def _idx(self, i, s=None):
+        s = self._cur() if s is None else s
+        if i in ('end', END):
+            return len(s)
+        if i in ('insert', INSERT):
+            return getattr(self, '_ins', len(s))
+        try:
+            n = int(i)
+        except (TypeError, ValueError):
+            raise TclError('bad entry index "%s"' % (i,)) from None
+        return max(0, min(n, len(s)))
+    def get(self):
+        return self._cur()
+    def insert(self, index, string):
+        if self._optvals.get('state') in ('disabled', 'readonly'):
+            return
+        s = self._cur()
+        i = self._idx(index, s)
+        self._store(s[:i] + str(string) + s[i:])
+        self._ins = i + len(str(string))
+    def delete(self, first, last=None):
+        if self._optvals.get('state') in ('disabled', 'readonly'):
+            return
+        s = self._cur()
+        a = self._idx(first, s)
+        b = a + 1 if last is None else self._idx(last, s)
+        if b > a:
+            self._store(s[:a] + s[b:])
+    def icursor(self, index):
+        self._ins = self._idx(index)
+    def index(self, index):
+        return self._idx(index)
+    def selection_range(self, start, end):
+        self._sel = (self._idx(start), self._idx(end))
+    select_range = selection_range
+    def selection_clear(self):
+        self._sel = None
+    def select_clear(self):
+        self._sel = None
+    def xview(self, *a):
+        return (0.0, 1.0)
+
+class Spinbox(Entry):
+    _kind = 'Spinbox'
+    def __init__(self, master=None, cnf=None, **kw):
+        Entry.__init__(self, master, cnf, **kw)
+        if 'values' in self._optvals and self._optvals['values']:
+            vals = self._values()
+            self._text = str(vals[0])
+        else:
+            lo = float(self._optvals.get('from', 0))
+            self._text = self._fmt(lo)
+        tv = self._optvals.get('textvariable')
+        if isinstance(tv, Variable) and not tv._value:
+            tv.set(self._text)
+    def _values(self):
+        v = self._optvals.get('values', ())
+        return tuple(v.split()) if isinstance(v, str) else tuple(v)
+    def _fmt(self, x):
+        inc = float(self._optvals.get('increment', 1))
+        if inc == int(inc) and float(self._optvals.get('from', 0)) == int(float(self._optvals.get('from', 0))):
+            return str(int(x))
+        return ('%g' % x)
+    def invoke(self, element):
+        up = element == 'buttonup'
+        vals = self._values() if self._optvals.get('values') else None
+        cur = self._cur()
+        if vals:
+            i = vals.index(cur) if cur in vals else 0
+            i = i + 1 if up else i - 1
+            if self._optvals.get('wrap') and (i >= len(vals) or i < 0):
+                i %= len(vals)
+            i = max(0, min(i, len(vals) - 1))
+            self._store(str(vals[i]))
+            return
+        inc = float(self._optvals.get('increment', 1))
+        lo = float(self._optvals.get('from', 0))
+        hi = float(self._optvals.get('to', 0))
+        x = float(cur) + (inc if up else -inc)
+        if self._optvals.get('wrap'):
+            if x > hi:
+                x = lo
+            elif x < lo:
+                x = hi
+        x = max(lo, min(hi, x))
+        self._store(self._fmt(x))
+
+class Scale(Widget):
+    _kind = 'Scale'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._setup(master or _get_root(), cnf, kw)
+        self._v = float(self._optvals.get('from', 0))
+        var = self._optvals.get('variable')
+        if isinstance(var, Variable) and var._value not in ('', None):
+            self._v = self._snap(float(var._value))
+    def _snap(self, v):
+        lo = float(self._optvals.get('from', 0))
+        hi = float(self._optvals.get('to', 100))
+        res = float(self._optvals.get('resolution', 1.0))
+        if res > 0:
+            v = round((v - lo) / res) * res + lo
+        return float('%.12g' % max(min(lo, hi), min(max(lo, hi), v)))
+    def _fmt(self, v):
+        v = float('%.12g' % v)
+        res = float(self._optvals.get('resolution', 1.0))
+        return str(int(v)) if res == int(res) else ('%g' % v)
+    def get(self):
+        var = self._optvals.get('variable')
+        if isinstance(var, Variable) and var._value not in ('', None):
+            self._v = self._snap(float(var._value))
+        res = float(self._optvals.get('resolution', 1.0))
+        return int(self._v) if res == int(res) else self._v
+    def set(self, value):
+        new = self._snap(float(value))
+        changed = new != self._v
+        self._v = new
+        var = self._optvals.get('variable')
+        if isinstance(var, Variable):
+            var.set(int(new) if float(new) == int(new) and float(self._optvals.get('resolution', 1.0)) == int(float(self._optvals.get('resolution', 1.0))) else new)
+
+
+class Listbox(Widget):
+    _kind = 'Listbox'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._items = []
+        self._sel = []
+        self._setup(master or _get_root(), cnf, kw)
+    def _i(self, index, for_insert=False):
+        if index in ('end', END):
+            return len(self._items) if for_insert else len(self._items) - 1
+        if index in ('active', ANCHOR):
+            return getattr(self, '_active', 0)
+        try:
+            return int(index)
+        except (TypeError, ValueError):
+            raise TclError('bad listbox index "%s": must be active, anchor, end, @x,y, or a number' % (index,)) from None
+    def insert(self, index, *elements):
+        i = self._i(index, True)
+        i = max(0, min(i, len(self._items)))
+        self._items[i:i] = list(elements)
+        self._sel = [s + len(elements) if s >= i else s for s in self._sel]
+    def get(self, first, last=None):
+        n = len(self._items)
+        a = self._i(first)
+        if last is None:
+            return self._items[a] if 0 <= a < n else ''
+        b = n - 1 if last in ('end', END) else self._i(last)
+        return tuple(self._items[max(a, 0):b + 1])
+    def delete(self, first, last=None):
+        n = len(self._items)
+        a = self._i(first)
+        b = a if last is None else (n - 1 if last in ('end', END) else self._i(last))
+        a = max(a, 0)
+        if a > b or a >= n:
+            return
+        del self._items[a:b + 1]
+        self._sel = [s if s < a else s - (b - a + 1) for s in self._sel if not (a <= s <= b)]
+    def size(self):
+        return len(self._items)
+    def curselection(self):
+        return tuple(sorted(self._sel))
+    def selection_set(self, first, last=None):
+        a = self._i(first)
+        b = a if last is None else self._i(last)
+        for i in range(max(a, 0), min(b, len(self._items) - 1) + 1):
+            if i not in self._sel:
+                self._sel.append(i)
+    select_set = selection_set
+    def selection_clear(self, first, last=None):
+        a = self._i(first)
+        b = a if last is None else self._i(last)
+        self._sel = [s for s in self._sel if not (a <= s <= b)]
+    select_clear = selection_clear
+    def activate(self, index):
+        self._active = self._i(index)
+    def see(self, index):
+        pass
+    def index(self, index):
+        return len(self._items) if index in ('end', END) else self._i(index)
+    def itemconfigure(self, index, **kw):
+        pass
+    itemconfig = itemconfigure
+    def yview(self, *a):
+        return (0.0, 1.0)
+    xview = yview
+
+class Scrollbar(Widget):
+    _kind = 'Scrollbar'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._first, self._last = 0.0, 1.0
+        self._setup(master or _get_root(), cnf, kw)
+    def set(self, first, last):
+        self._first, self._last = float(first), float(last)
+    def get(self):
+        return (self._first, self._last)
+
+class Text(Widget):
+    _kind = 'Text'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._s = ''
+        self._ins = 0
+        self._tags = {}
+        self._setup(master or _get_root(), cnf, kw)
+    def _lines(self):
+        return self._s.split('\n')
+    def _pos(self, index):
+        s = self._s
+        idx = str(index).strip()
+        mods = []
+        for tok in ('lineend', 'linestart'):
+            pass
+        parts = idx.replace('+', ' +').replace('-', ' -').split()
+        base = parts[0]
+        mods = parts[1:]
+        if base == 'end':
+            off = len(s) + 1
+        elif base == 'insert':
+            off = self._ins
+        elif '.' in base:
+            ln, col = base.split('.', 1)
+            try:
+                ln = int(ln)
+                col = len(self._lines()[min(max(ln, 1), len(self._lines())) - 1]) if col == 'end' else int(col)
+            except ValueError:
+                raise TclError('bad text index "%s"' % index) from None
+            lines = self._lines()
+            if ln > len(lines):
+                off = len(s) + 1
+            else:
+                ln = max(ln, 1)
+                start = sum(len(x) + 1 for x in lines[:ln - 1])
+                off = start + min(max(col, 0), len(lines[ln - 1]))
+        else:
+            raise TclError('bad text index "%s"' % index)
+        for m in mods:
+            if m == 'lineend':
+                off = s.find('\n', min(off, len(s))) if s.find('\n', min(off, len(s))) >= 0 else len(s)
+            elif m == 'linestart':
+                off = s.rfind('\n', 0, off) + 1
+            elif m[-1:] == 'c' and m[:-1].lstrip('+-').isdigit():
+                off += int(m[:-1])
+            elif m[-5:] == 'chars':
+                off += int(m[:-5])
+            else:
+                raise TclError('bad text index "%s"' % index)
+        return max(0, min(off, len(s) + 1))
+    def get(self, index1, index2=None):
+        a = self._pos(index1)
+        full = self._s + '\n'
+        if index2 is None:
+            return full[a:a + 1]
+        b = self._pos(index2)
+        return full[a:b]
+    def insert(self, index, chars, *tags):
+        if self._optvals.get('state') == 'disabled':
+            return
+        a = min(self._pos(index), len(self._s))
+        self._s = self._s[:a] + chars + self._s[a:]
+        if self._ins >= a:
+            self._ins += len(chars)
+    def delete(self, index1, index2=None):
+        if self._optvals.get('state') == 'disabled':
+            return
+        a = min(self._pos(index1), len(self._s))
+        b = a + 1 if index2 is None else min(self._pos(index2), len(self._s))
+        if b > a:
+            self._s = self._s[:a] + self._s[b:]
+            if self._ins > a:
+                self._ins = max(a, self._ins - (b - a))
+    def index(self, index):
+        off = self._pos(index)
+        before = (self._s + '\n')[:off]
+        return '%d.%d' % (before.count('\n') + 1, len(before) - (before.rfind('\n') + 1))
+    def mark_set(self, name, index):
+        if name == 'insert':
+            self._ins = min(self._pos(index), len(self._s))
+    def see(self, index):
+        pass
+    def tag_configure(self, tag, **kw):
+        self._tags.setdefault(tag, {}).update(kw)
+    tag_config = tag_configure
+    def tag_add(self, tag, i1, *more):
+        self._tags.setdefault(tag, {})
+    def tag_remove(self, tag, i1, i2=None):
+        pass
+    def edit_modified(self, flag=None):
+        return False
+    def edit_undo(self):
+        pass
+    def edit_reset(self):
+        pass
+    def yview(self, *a):
+        return (0.0, 1.0)
+    xview = yview
+    def search(self, pattern, index, stopindex=None, **kw):
+        a = self._pos(index)
+        i = self._s.find(pattern, a)
+        if i < 0:
+            return ''
+        before = self._s[:i]
+        return '%d.%d' % (before.count('\n') + 1, i - (before.rfind('\n') + 1))
+
+_COLOR_NAMES = set("""white black red green blue yellow cyan magenta orange purple pink brown gray grey gold silver navy teal maroon olive lime aqua fuchsia
+aliceblue antiquewhite aquamarine azure beige bisque blanchedalmond blueviolet burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson
+darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen gainsboro
+ghostwhite goldenrod greenyellow honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrod lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslateblue lightslategray lightslategrey
+lightsteelblue lightyellow limegreen linen mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navyblue oldlace olivedrab orangered orchid palegoldenrod palegreen
+paleturquoise palevioletred papayawhip peachpuff peru plum powderblue rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna skyblue
+slateblue slategray slategrey snow springgreen steelblue tan thistle tomato turquoise violet violetred wheat whitesmoke yellowgreen""".split())
+
+_WIDGET_COLOR_OPTS = {'background', 'foreground', 'activebackground', 'activeforeground', 'disabledforeground', 'highlightbackground', 'highlightcolor', 'insertbackground', 'selectbackground', 'selectforeground', 'troughcolor', 'selectcolor'}
+
+def _check_color(v, allow_empty=True):
+    v = str(v)
+    if v.startswith('#') and not _re.fullmatch(r'#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{9}|[0-9a-fA-F]{12})', v):
+        raise TclError('invalid color name "%s"' % v)
+    if (v == '' and allow_empty) or _re.fullmatch(r'#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{9}|[0-9a-fA-F]{12})', v):
+        return v
+    base = _re.sub(r'[ _]', '', v.lower())
+    base2 = _re.sub(r'\d+$', '', base)
+    if base in _COLOR_NAMES or base2 in _COLOR_NAMES or _re.fullmatch(r'gr[ae]y\d{1,3}', base):
+        return v
+    raise TclError('unknown color name "%s"' % v)
+
+_ITEM_OPTS = {
+    'rectangle': 'fill outline width dash state tags stipple outlinestipple offset dashoffset activefill activeoutline activewidth activedash activestipple activeoutlinestipple disabledfill disabledoutline disabledwidth disableddash disabledstipple disabledoutlinestipple',
+    'line': 'fill width dash state tags stipple offset dashoffset arrow arrowshape capstyle joinstyle smooth splinesteps activefill activewidth activedash activestipple disabledfill disabledwidth disableddash disabledstipple',
+    'text': 'fill font text anchor justify width angle state tags stipple offset underline activefill disabledfill activestipple disabledstipple',
+    'image': 'image anchor state tags activeimage disabledimage',
+    'window': 'window anchor width height state tags',
+}
+_ITEM_OPTS['oval'] = _ITEM_OPTS['rectangle']
+_ITEM_OPTS['arc'] = _ITEM_OPTS['rectangle'] + ' start extent style'
+_ITEM_OPTS['polygon'] = _ITEM_OPTS['rectangle'] + ' smooth splinesteps joinstyle'
+_ITEM_OPTS = {k: set(v.split()) for k, v in _ITEM_OPTS.items()}
+_COLOR_OPTS = {'fill', 'outline', 'activefill', 'activeoutline', 'disabledfill', 'disabledoutline'}
+
+def _item_defaults(kind):
+    d = {'state': '', 'tags': '', 'dash': '', 'width': '1.0', 'fill': '', 'outline': '#000000'}
+    if kind == 'line':
+        d.update(fill='#000000', arrow='none', smooth='0', capstyle='butt', joinstyle='round')
+        del d['outline']
+    elif kind == 'polygon':
+        d.update(fill='#000000', outline='', smooth='0', joinstyle='round')
+    elif kind == 'text':
+        d.update(fill='#000000', width='0', text='', anchor='center', font='TkDefaultFont', justify='left', angle='0.0')
+        del d['outline'], d['dash']
+    elif kind == 'arc':
+        d.update(start='0.0', extent='90.0', style='pieslice')
+    elif kind in ('image', 'window'):
+        d = {'state': '', 'tags': '', 'anchor': 'center', 'image': '', 'window': '', 'width': '0', 'height': '0'}
+    return d
+
+def _item_value(opt, v, kind):
+    if opt == 'tags':
+        t = v.split() if isinstance(v, str) else list(v)
+        return ' '.join(str(x) for x in t)
+    if opt == 'dash' and isinstance(v, (tuple, list)):
+        return ' '.join(str(x) for x in v)
+    if opt == 'smooth':
+        return 'true' if v in (True, 1, 'true', 'bezier', 'raw') and v != 'bezier' else ('0' if v in (False, 0, '0', 'false') else str(v))
+    if opt in ('start', 'extent', 'angle') or (opt == 'width' and kind != 'text'):
+        try:
+            return str(float(v))
+        except (TypeError, ValueError):
+            raise TclError('bad screen distance "%s"' % v)
+    if opt == 'font' and isinstance(v, (tuple, list)):
+        return ' '.join(str(x) for x in v)
+    if opt == 'text':
+        return str(v)
+    if opt in _COLOR_OPTS:
+        return _check_color(v)
+    return str(v) if not isinstance(v, (int, float)) or opt == 'width' else str(v)
+
+def _flat_checked(coords):
+    out = []
+    for c in coords:
+        if isinstance(c, (list, tuple)):
+            out.extend(_flat_checked(c))
+        else:
+            try:
+                out.append(float(c))
+            except (TypeError, ValueError):
+                raise TclError('bad screen distance "%s"' % (c,))
+    return out
+
+class Canvas(Widget):
+    _kind = 'Canvas'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._items = {}
+        self._next = 1
+        self._tagbind = {}
+        self._setup(master or _get_root(), cnf, kw)
+    # -- item creation and options
+    def _create(self, kind, args, kw):
+        if args and isinstance(args[-1], dict):
+            kw = dict(args[-1], **kw)
+            args = args[:-1]
+        coords = _flat_checked(args)
+        n = len(coords)
+        if kind in ('rectangle', 'oval', 'arc'):
+            if n != 4:
+                raise TclError('wrong # coordinates: expected 0 or 4, got %d' % n)
+        elif kind in ('text', 'image', 'window'):
+            if n != 2:
+                raise TclError('wrong # coordinates: expected 2, got %d' % n)
+        elif n % 2:
+            raise TclError('wrong # coordinates: expected an even number, got %d' % n)
+        elif n < 4:
+            raise TclError('wrong # coordinates: expected at least 4, got %d' % n)
+        opts = {}
+        for k, v in kw.items():
+            if k not in _ITEM_OPTS[kind]:
+                raise TclError('unknown option "-%s"' % k)
+            opts[k] = _item_value(k, v, kind)
+        i = self._next
+        self._next += 1
+        tags = tuple(opts.get('tags', '').split())
+        self._items[i] = {'type': kind, 'coords': coords, 'opts': opts, 'tags': tags}
+        return i
+    def create_line(self, *a, **k): return self._create('line', a, k)
+    def create_rectangle(self, *a, **k): return self._create('rectangle', a, k)
+    def create_oval(self, *a, **k): return self._create('oval', a, k)
+    def create_polygon(self, *a, **k): return self._create('polygon', a, k)
+    def create_text(self, *a, **k): return self._create('text', a, k)
+    def create_arc(self, *a, **k): return self._create('arc', a, k)
+    def create_image(self, *a, **k): return self._create('image', a, k)
+    def create_window(self, *a, **k): return self._create('window', a, k)
+    def _ids(self, spec):
+        if spec in ('all', ALL):
+            return list(self._items)
+        if isinstance(spec, int) or (isinstance(spec, str) and spec.isdigit()):
+            return [int(spec)] if int(spec) in self._items else []
+        return [i for i, it in self._items.items() if spec in it['tags']]
+    def _opt(self, it, name):
+        d = _item_defaults(it['type'])
+        return it['opts'].get(name, d.get(name))
+    def coords(self, item, *new):
+        ids = self._ids(item)
+        if new:
+            for i in ids[:1]:
+                self._items[i]['coords'] = _flat_checked(new)
+            return []
+        if not ids:
+            return []
+        return list(self._items[ids[0]]['coords'])
+    def move(self, item, dx, dy):
+        for i in self._ids(item):
+            c = self._items[i]['coords']
+            self._items[i]['coords'] = [v + (dx if k % 2 == 0 else dy) for k, v in enumerate(c)]
+    def scale(self, item, xo, yo, xs, ys):
+        for i in self._ids(item):
+            c = self._items[i]['coords']
+            self._items[i]['coords'] = [(xo + (v - xo) * xs) if k % 2 == 0 else (yo + (v - yo) * ys) for k, v in enumerate(c)]
+    def moveto(self, item, x=None, y=None):
+        b = self.bbox(item)
+        if b is None:
+            return
+        self.move(item, 0 if x is None else float(x) - b[0], 0 if y is None else float(y) - b[1])
+    def delete(self, *items):
+        for spec in items:
+            for i in self._ids(spec):
+                self._items.pop(i, None)
+    def itemconfigure(self, item, cnf=None, **kw):
+        opts = dict(cnf or {})
+        opts.update(kw)
+        ids = self._ids(item)
+        if not opts:
+            if not ids:
+                return None
+            it = self._items[ids[0]]
+            d = _item_defaults(it['type'])
+            return {k: (k, '', '', d.get(k, ''), it['opts'].get(k, d.get(k, ''))) for k in sorted(_ITEM_OPTS[it['type']])}
+        for i in ids:
+            it = self._items[i]
+            for k, v in opts.items():
+                if k not in _ITEM_OPTS[it['type']]:
+                    raise TclError('unknown option "-%s"' % k)
+            for k, v in opts.items():
+                it['opts'][k] = _item_value(k, v, it['type'])
+            if 'tags' in opts:
+                it['tags'] = tuple(it['opts']['tags'].split())
+    itemconfig = itemconfigure
+    def itemcget(self, item, option):
+        ids = self._ids(item)
+        if not ids:
+            return ''
+        it = self._items[ids[0]]
+        if option not in _ITEM_OPTS[it['type']]:
+            raise TclError('unknown option "-%s"' % option)
+        v = self._opt(it, option)
+        return '' if v is None else v
+    def find_all(self):
+        return tuple(self._items)
+    def find_withtag(self, spec):
+        return tuple(self._ids(spec))
+    def gettags(self, item):
+        ids = self._ids(item)
+        return self._items[ids[0]]['tags'] if ids else ()
+    def type(self, item):
+        ids = self._ids(item)
+        return self._items[ids[0]]['type'] if ids else None
+    # -- geometry queries
+    def _hw(self, it):
+        k = it['type']
+        if k in ('rectangle', 'oval', 'arc', 'polygon'):
+            if self._opt(it, 'outline') == '':
+                return 0.0
+            return float(self._opt(it, 'width')) / 2
+        if k == 'line':
+            return float(self._opt(it, 'width')) / 2
+        return 0.0
+    def _text_box(self, it):
+        x, y = it['coords']
+        txt = it['opts'].get('text', '')
+        lines = txt.split('\n') or ['']
+        w, h = 8 * max(len(l) for l in lines), 18 * len(lines)
+        anchor = self._opt(it, 'anchor')
+        ax = 0.5 * w if 'w' not in anchor and 'e' not in anchor else (0 if 'w' in anchor else w)
+        ay = 0.5 * h if 'n' not in anchor and 's' not in anchor else (0 if 'n' in anchor else h)
+        return (x - ax, y - ay, x - ax + w, y - ay + h)
+    def _arc_pts(self, it):
+        x1, y1, x2, y2 = it['coords']
+        cx, cy, rx, ry = (x1 + x2) / 2, (y1 + y2) / 2, abs(x2 - x1) / 2, abs(y2 - y1) / 2
+        st = float(self._opt(it, 'start'))
+        ex = float(self._opt(it, 'extent'))
+        pts = []
+        n = 72
+        for j in range(n + 1):
+            a = _math.radians(st + ex * j / n)
+            pts.append((cx + rx * _math.cos(a), cy - ry * _math.sin(a)))
+        if self._opt(it, 'style') == 'pieslice':
+            pts.append((cx, cy))
+        return pts
+    def _raw_box(self, it):
+        k, c = it['type'], it['coords']
+        if k == 'arc':
+            pts = self._arc_pts(it)
+            return (min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts))
+        if k == 'text':
+            return self._text_box(it)
+        if k in ('image', 'window'):
+            return (c[0], c[1], c[0], c[1])
+        xs, ys = c[0::2], c[1::2]
+        return (min(xs), min(ys), max(xs), max(ys))
+    def _bbox_item(self, it):
+        x1, y1, x2, y2 = self._raw_box(it)
+        k = it['type']
+        if k == 'line':
+            m = float(self._opt(it, 'width')) + 1
+        elif k == 'polygon':
+            m = 1 if self._opt(it, 'outline') == '' else self._hw(it) + 1
+        elif k in ('text', 'image', 'window'):
+            return (int(_math.floor(x1)), int(_math.floor(y1)), int(_math.ceil(x2)), int(_math.ceil(y2)))
+        elif k == 'arc':
+            m = self._hw(it) + 1.5
+        else:
+            m = self._hw(it)
+        return (int(_math.floor(x1 - m)), int(_math.floor(y1 - m)), int(_math.ceil(x2 + m)), int(_math.ceil(y2 + m)))
+    def bbox(self, *specs):
+        boxes = []
+        for sp in (specs or ('all',)):
+            boxes += [self._bbox_item(self._items[i]) for i in self._ids(sp)]
+        if not boxes:
+            return None
+        return (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+    def _filled(self, it):
+        return self._opt(it, 'fill') != '' if it['type'] != 'line' else False
+    def _dist(self, it, px, py):
+        """distance from the point to the visible part of the item (0 = touching)."""
+        k = it['type']
+        hw = self._hw(it)
+        x1, y1, x2, y2 = self._raw_box(it)
+        if k == 'line':
+            c = it['coords']
+            best = min(_seg_dist(px, py, c[j], c[j + 1], c[j + 2], c[j + 3]) for j in range(0, len(c) - 2, 2))
+            return max(0.0, best - hw)
+        if k == 'polygon':
+            c = it['coords']
+            pts = list(zip(c[0::2], c[1::2]))
+            edge = min(_seg_dist(px, py, *pts[j], *pts[(j + 1) % len(pts)]) for j in range(len(pts)))
+            if self._filled(it) and _in_poly(px, py, pts):
+                return 0.0
+            return max(0.0, edge - hw)
+        if k in ('rectangle', 'arc'):
+            dx = max(x1 - px, 0, px - x2)
+            dy = max(y1 - py, 0, py - y2)
+            out = _math.hypot(dx, dy)
+            if out > 0 or self._filled(it):
+                return max(0.0, out - hw)
+            inside = min(px - x1, x2 - px, py - y1, y2 - py)
+            return max(0.0, inside - hw)
+        if k == 'oval':
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            rx, ry = max((x2 - x1) / 2, 1e-9), max((y2 - y1) / 2, 1e-9)
+            r = _math.hypot((px - cx) / rx, (py - cy) / ry)
+            mean = (rx + ry) / 2
+            if r >= 1:
+                return max(0.0, (r - 1) * mean - hw)
+            if self._filled(it):
+                return 0.0
+            return max(0.0, (1 - r) * mean - hw)
+        dx = max(x1 - px, 0, px - x2)
+        dy = max(y1 - py, 0, py - y2)
+        return _math.hypot(dx, dy)
+    def _overlaps(self, it, x1, y1, x2, y2):
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+        k = it['type']
+        if k in ('rectangle', 'arc', 'oval', 'polygon') and self._opt(it, 'fill') == '' and self._opt(it, 'outline') == '':
+            return False
+        bx1, by1, bx2, by2 = self._raw_box(it)
+        hw = self._hw(it)
+        if k == 'line':
+            c = it['coords']
+            return any(_seg_rect(c[j], c[j + 1], c[j + 2], c[j + 3], x1 - hw, y1 - hw, x2 + hw, y2 + hw) for j in range(0, len(c) - 2, 2))
+        if bx2 + hw < x1 or bx1 - hw > x2 or by2 + hw < y1 or by1 - hw > y2:
+            return False
+        if k == 'polygon':
+            c = it['coords']
+            pts = list(zip(c[0::2], c[1::2]))
+            if any(_seg_rect(*pts[j], *pts[(j + 1) % len(pts)], x1 - hw, y1 - hw, x2 + hw, y2 + hw) for j in range(len(pts))):
+                return True
+            return self._filled(it) and _in_poly((x1 + x2) / 2, (y1 + y2) / 2, pts)
+        if k == 'oval':
+            cx, cy = (bx1 + bx2) / 2, (by1 + by2) / 2
+            rx, ry = (bx2 - bx1) / 2 + hw, (by2 - by1) / 2 + hw
+            qx = min(max(cx, x1), x2)
+            qy = min(max(cy, y1), y2)
+            if rx <= 0 or ry <= 0 or ((qx - cx) / rx) ** 2 + ((qy - cy) / ry) ** 2 > 1:
+                return False
+        if k in ('rectangle', 'oval', 'arc') and not self._filled(it):
+            ix1, iy1, ix2, iy2 = bx1 + hw, by1 + hw, bx2 - hw, by2 - hw
+            if k == 'rectangle' and x1 > ix1 and x2 < ix2 and y1 > iy1 and y2 < iy2:
+                return False
+            if k == 'oval':
+                cx, cy = (bx1 + bx2) / 2, (by1 + by2) / 2
+                rx, ry = (bx2 - bx1) / 2 - hw, (by2 - by1) / 2 - hw
+                if rx > 0 and ry > 0 and all(((qx - cx) / rx) ** 2 + ((qy - cy) / ry) ** 2 < 1 for qx in (x1, x2) for qy in (y1, y2)):
+                    return False
+        return True
+    def find_overlapping(self, x1, y1, x2, y2):
+        return tuple(i for i, it in self._items.items() if self._overlaps(it, float(x1), float(y1), float(x2), float(y2)))
+    def find_enclosed(self, x1, y1, x2, y2):
+        x1, x2 = sorted((float(x1), float(x2)))
+        y1, y2 = sorted((float(y1), float(y2)))
+        out = []
+        for i, it in self._items.items():
+            b = self._bbox_item(it)
+            if b[0] >= x1 and b[1] >= y1 and b[2] <= x2 and b[3] <= y2:
+                out.append(i)
+        return tuple(out)
+    def find_closest(self, x, y, halo=None, start=None):
+        best = None
+        for i, it in self._items.items():
+            d = self._dist(it, float(x), float(y))
+            if best is None or d <= best[0]:
+                best = (d, i)
+        return (best[1],) if best else ()
+    def find_above(self, item):
+        ids = self._ids(item)
+        order = list(self._items)
+        if not ids:
+            return ()
+        pos = max(order.index(i) for i in ids)
+        return (order[pos + 1],) if pos + 1 < len(order) else ()
+    def find_below(self, item):
+        ids = self._ids(item)
+        order = list(self._items)
+        if not ids:
+            return ()
+        pos = min(order.index(i) for i in ids)
+        return (order[pos - 1],) if pos > 0 else ()
+    # -- tags and stacking order
+    def addtag_withtag(self, tag, spec):
+        for i in self._ids(spec):
+            if tag not in self._items[i]['tags']:
+                self._items[i]['tags'] += (tag,)
+    def addtag_all(self, tag):
+        self.addtag_withtag(tag, 'all')
+    def addtag_above(self, tag, spec):
+        for i in self.find_above(spec):
+            self.addtag_withtag(tag, i)
+    def addtag_below(self, tag, spec):
+        for i in self.find_below(spec):
+            self.addtag_withtag(tag, i)
+    def addtag_closest(self, tag, x, y, halo=None, start=None):
+        for i in self.find_closest(x, y):
+            self.addtag_withtag(tag, i)
+    def addtag_overlapping(self, tag, x1, y1, x2, y2):
+        for i in self.find_overlapping(x1, y1, x2, y2):
+            self.addtag_withtag(tag, i)
+    def addtag_enclosed(self, tag, x1, y1, x2, y2):
+        for i in self.find_enclosed(x1, y1, x2, y2):
+            self.addtag_withtag(tag, i)
+    def dtag(self, spec, tag=None):
+        tag = str(spec if tag is None else tag)
+        for i in self._ids(spec):
+            self._items[i]['tags'] = tuple(t for t in self._items[i]['tags'] if t != tag)
+    def tag_raise(self, spec, above=None):
+        moving = self._ids(spec)
+        order = [i for i in self._items if i not in moving]
+        mv = [i for i in self._items if i in moving]
+        ab = self._ids(above) if above is not None else []
+        if ab:
+            full = list(self._items)
+            pos = max(order.index(i) for i in ab if i in order) + 1 if any(i in order for i in ab) else len(order)
+            order[pos:pos] = mv
+        else:
+            order += mv
+        self._items = {i: self._items[i] for i in order}
+    lift = tkraise = tag_raise
+    def tag_lower(self, spec, below=None):
+        moving = self._ids(spec)
+        order = [i for i in self._items if i not in moving]
+        mv = [i for i in self._items if i in moving]
+        bl = self._ids(below) if below is not None else []
+        if bl and any(i in order for i in bl):
+            pos = min(order.index(i) for i in bl if i in order)
+            order[pos:pos] = mv
+        else:
+            order = mv + order
+        self._items = {i: self._items[i] for i in order}
+    def tag_bind(self, spec, sequence=None, func=None, add=None):
+        table = self._tagbind.setdefault(spec if not isinstance(spec, int) else str(spec), {})
+        if sequence is None:
+            return tuple(table)
+        if func is None:
+            return '' if sequence not in table else 'if {"[%s %%# ...]" == "break"} break' % (id(table[sequence][-1]) % 100000)
+        _parse_seq(sequence, True)
+        if add in ('+', True):
+            table.setdefault(sequence, []).append(func)
+        else:
+            table[sequence] = [func]
+        return '%scallit' % (id(func) % 100000)
+    def tag_unbind(self, spec, sequence, funcid=None):
+        self._tagbind.get(spec if not isinstance(spec, int) else str(spec), {}).pop(sequence, None)
+    def _item_tables(self, ev):
+        """binding tables of the tags of the topmost item under the pointer (item bindings run before the widget's own)."""
+        hit = [i for i in self.find_overlapping(ev.x, ev.y, ev.x, ev.y)]
+        if not hit:
+            return []
+        top = hit[-1]
+        names = [str(top)] + list(self._items[top]['tags']) + ['all']
+        return [self._tagbind[n] for n in names if n in self._tagbind]
+    def canvasx(self, screenx, gridspacing=None):
+        return float(screenx)
+    def canvasy(self, screeny, gridspacing=None):
+        return float(screeny)
+    def xview(self, *a):
+        return (0.0, 1.0)
+    yview = xview
+    def xview_moveto(self, *a): pass
+    yview_moveto = xview_moveto
+    def postscript(self, **kw): return ''
+
+def _seg_dist(px, py, x1, y1, x2, y2):
+    dx, dy = x2 - x1, y2 - y1
+    if dx == 0 and dy == 0:
+        return _math.hypot(px - x1, py - y1)
+    t = max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+    return _math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+
+def _seg_rect(x1, y1, x2, y2, rx1, ry1, rx2, ry2):
+    """does the segment touch the rectangle (Liang-Barsky)?"""
+    t0, t1 = 0.0, 1.0
+    dx, dy = x2 - x1, y2 - y1
+    for p, q in ((-dx, x1 - rx1), (dx, rx2 - x1), (-dy, y1 - ry1), (dy, ry2 - y1)):
+        if p == 0:
+            if q < 0:
+                return False
+        else:
+            r = q / p
+            if p < 0:
+                if r > t1: return False
+                t0 = max(t0, r)
+            else:
+                if r < t0: return False
+                t1 = min(t1, r)
+    return True
+
+def _in_poly(px, py, pts):
+    inside = False
+    n = len(pts)
+    for i in range(n):
+        x1, y1 = pts[i]
+        x2, y2 = pts[(i + 1) % n]
+        if (y1 > py) != (y2 > py) and px < (x2 - x1) * (py - y1) / (y2 - y1) + x1:
+            inside = not inside
+    return inside
+
+class Menu(Widget):
+    _kind = 'Menu'
+    def __init__(self, master=None, cnf=None, **kw):
+        self._entries = []
+        self._setup(master or _get_root(), cnf, kw)
+        if str(self._optvals.get('tearoff', 1)) in ('1', 'True'):
+            self._entries.append({'type': 'tearoff'})
+    def add(self, itemType, cnf=None, **kw):
+        e = {'type': itemType}
+        e.update(cnf or {})
+        e.update(kw)
+        self._entries.append(e)
+    def add_command(self, cnf=None, **kw): self.add('command', cnf, **kw)
+    def add_cascade(self, cnf=None, **kw): self.add('cascade', cnf, **kw)
+    def add_separator(self, cnf=None, **kw): self.add('separator', cnf, **kw)
+    def add_checkbutton(self, cnf=None, **kw): self.add('checkbutton', cnf, **kw)
+    def add_radiobutton(self, cnf=None, **kw): self.add('radiobutton', cnf, **kw)
+    def insert(self, index, itemType, cnf=None, **kw):
+        e = {'type': itemType}
+        e.update(cnf or {})
+        e.update(kw)
+        self._entries.insert(self._i(index), e)
+    def insert_command(self, index, cnf=None, **kw): self.insert(index, 'command', cnf, **kw)
+    def insert_separator(self, index, cnf=None, **kw): self.insert(index, 'separator', cnf, **kw)
+    def _i(self, index):
+        if index in ('end', END):
+            return len(self._entries) - 1 if self._entries else -1
+        if index in ('last',):
+            return len(self._entries) - 1
+        if isinstance(index, int):
+            return index
+        for n, e in enumerate(self._entries):
+            if e.get('label') == index:
+                return n
+        raise TclError('bad menu entry index "%s"' % (index,))
+    def index(self, index):
+        i = self._i(index)
+        return None if i < 0 else i
+    def entryconfigure(self, index, cnf=None, **kw):
+        self._entries[self._i(index)].update(cnf or {}); self._entries[self._i(index)].update(kw)
+    entryconfig = entryconfigure
+    def entrycget(self, index, option):
+        e = self._entries[self._i(index)]
+        if option == 'state':
+            return e.get('state', 'normal')
+        if option not in e and e['type'] == 'tearoff':
+            raise TclError('unknown option "-%s"' % option)
+        v = e.get(option, '')
+        if isinstance(v, Misc):
+            return str(v)
+        return v
+    def type(self, index):
+        return self._entries[self._i(index)]['type']
+    def delete(self, index1, index2=None):
+        a = self._i(index1)
+        b = a if index2 is None else self._i(index2)
+        del self._entries[a:b + 1]
+    def invoke(self, index):
+        e = self._entries[self._i(index)]
+        if e.get('state', 'normal') == 'disabled' or e['type'] in ('separator', 'tearoff'):
+            return ''
+        var = e.get('variable')
+        if e['type'] == 'checkbutton' and isinstance(var, Variable):
+            on, off = e.get('onvalue', 1), e.get('offvalue', 0)
+            var.set(off if _tcl_str(var._value) == _tcl_str(on) else on)
+        elif e['type'] == 'radiobutton' and isinstance(var, Variable):
+            var.set(e.get('value', e.get('label', '')))
+        cmd = e.get('command')
+        return _ret(_safe(self, cmd)) if cmd else ''
+    def tk_popup(self, x, y, entry=''):
+        pass
+    def post(self, x, y):
+        pass
+    def unpost(self):
+        pass
+
+class Wm:
+    def title(self, string=None):
+        if string is None:
+            return getattr(self, '_title', 'tk' if self.master is None else '')
+        self._title = string
+    wm_title = title
+    def geometry(self, newGeometry=None):
+        if newGeometry is None:
+            return getattr(self, '_geometry', '1x1+0+0')
+        import re as _re
+        m = _re.fullmatch(r'(?:(\d+)x(\d+))?(?:([+-]\d+)([+-]\d+))?', str(newGeometry))
+        if not m or not newGeometry:
+            raise TclError('bad geometry specifier "%s"' % newGeometry)
+        w, h, x, y = m.groups()
+        old = getattr(self, '_wh', None)
+        if w is not None:
+            self._wh = (int(w), int(h))
+        wh = getattr(self, '_wh', (1, 1))
+        self._geometry = '%dx%d%s%s' % (wh[0], wh[1], x or '+0', y or '+0')
+    wm_geometry = geometry
+    def resizable(self, width=None, height=None):
+        if width is None and height is None:
+            return getattr(self, '_resizable', (1, 1))
+        self._resizable = (int(bool(width)), int(bool(height)))
+    wm_resizable = resizable
+    def minsize(self, width=None, height=None):
+        if width is None:
+            return getattr(self, '_minsize', (1, 1))
+        self._minsize = (width, height)
+    def maxsize(self, width=None, height=None):
+        if width is None:
+            return getattr(self, '_maxsize', (1920, 1080))
+        self._maxsize = (width, height)
+    def attributes(self, *args):
+        store = self.__dict__.setdefault('_attrs', {})
+        if len(args) == 1:
+            return store.get(args[0], 0)
+        for k, v in zip(args[::2], args[1::2]):
+            store[k] = v
+    wm_attributes = attributes
+    def protocol(self, name=None, func=None):
+        store = self.__dict__.setdefault('_protocols', {})
+        if func is None:
+            return '%scallit' % (id(store[name]) % 100000) if name in store else ''
+        store[name] = func
+    wm_protocol = protocol
+    def state(self, newstate=None):
+        if newstate is None:
+            return getattr(self, '_wmstate', 'normal')
+        self._wmstate = newstate
+    def withdraw(self):
+        self._wmstate = 'withdrawn'
+    def iconify(self):
+        self._wmstate = 'iconic'
+    def deiconify(self):
+        self._wmstate = 'normal'
+    def iconbitmap(self, *a, **k):
+        pass
+    def iconphoto(self, *a, **k):
+        pass
+    def overrideredirect(self, flag=None):
+        pass
+    def transient(self, master=None):
+        pass
+
+class Tk(Wm, Misc):
+    _kind = 'Toplevel'
+    _is_toplevel = True
+    def __init__(self, screenName=None, baseName=None, className='Tk', useTk=True, sync=False, use=None):
+        global _default_root
+        self._menu = None
+        self._setup(None, None, {})
+        self._focus = None
+        self._running = False
+        self.tk = self
+        if _default_root is None:
+            _default_root = self
+    def mainloop(self, n=0):
+        _render(self)
+        print('(simulated: a real window would stay open here until you close it)')
+    def quit(self):
+        pass
+    def report_callback_exception(self, exc, val, tb):
+        import traceback
+        _sys.stderr.write('Exception in Tkinter callback\n')
+        traceback.print_exception(exc, val, tb)
+    def destroy(self):
+        Misc.destroy(self)
+
+class Toplevel(Wm, Misc):
+    _kind = 'Toplevel'
+    _is_toplevel = True
+    def __init__(self, master=None, cnf=None, **kw):
+        self._menu = None
+        self._setup(master or _get_root(), cnf, kw, name='toplevel')
+
+class Tcl:
+    pass
+
+_RGB_NAMES = {'black': (0, 0, 0), 'white': (255, 255, 255), 'red': (255, 0, 0), 'green': (0, 255, 0), 'blue': (0, 0, 255), 'yellow': (255, 255, 0),
+              'cyan': (0, 255, 255), 'magenta': (255, 0, 255), 'gray': (190, 190, 190), 'grey': (190, 190, 190)}
+
+def _rgb(color):
+    color = str(color)
+    if color.startswith('#'):
+        h = color[1:]
+        n = len(h) // 3
+        return tuple(int(h[i * n:(i + 1) * n], 16) * (255 if n == 1 else 1) // (15 if n == 1 else 1) if n == 1 else int(h[i * n:(i + 1) * n][:2], 16) for i in range(3))
+    if color.lower() in _RGB_NAMES:
+        return _RGB_NAMES[color.lower()]
+    raise TclError('unknown color name "%s"' % color)
+
+class PhotoImage:
+    def __init__(self, name=None, cnf=None, master=None, **kw):
+        self._w = kw.get('width', 1)
+        self._h = kw.get('height', 1)
+        self.file = kw.get('file')
+        self._px = {}
+    def width(self): return self._w
+    def height(self): return self._h
+    def subsample(self, x, y=None): return PhotoImage(width=self._w // x, height=self._h // (y or x))
+    def zoom(self, x, y=None): return PhotoImage(width=self._w * x, height=self._h * (y or x))
+    def put(self, data, to=None):
+        x, y = (to[0], to[1]) if to else (0, 0)
+        if isinstance(data, str) and not data.startswith('{') and ' ' not in data.strip():
+            self._px[(x, y)] = _rgb(data)
+    def get(self, x, y):
+        if not (0 <= x < self._w and 0 <= y < self._h):
+            raise TclError('coordinates out of bounds' if False else 'src bounding box outside image')
+        return self._px.get((x, y), (0, 0, 0))
+    def blank(self): self._px = {}
+
+def mainloop(n=0):
+    if _default_root is not None:
+        _default_root.mainloop(n)
+
+# ---------------------------------------------------------------- rendering
+def _describe(w):
+    cls = w.__class__.__name__
+    if getattr(w, '_ttk', False):
+        cls = 'ttk.' + cls
+    bits = []
+    kind = w.__class__
+    try:
+        if 'text' in w._optvals or 'textvariable' in w._optvals:
+            t = _text_of(w)
+            if t != '' or 'text' in w._optvals:
+                bits.append(repr(t))
+    except Exception:
+        pass
+    if isinstance(w, (Entry,)) and not isinstance(w, Spinbox):
+        bits.append('text=%r' % w.get())
+    if 'command' in w._optvals and w._optvals['command']:
+        bits.append('-> %s()' % getattr(w._optvals['command'], '__name__', 'command'))
+    if 'variable' in w._optvals and isinstance(w._optvals['variable'], Variable) and isinstance(w, (Checkbutton, Radiobutton, Scale)):
+        bits.append('var=%r' % (w._optvals['variable']._value,))
+    if isinstance(w, Listbox):
+        bits.append('items=%r' % (list(w._items),))
+    if isinstance(w, Text):
+        bits.append('text=%r' % w._s)
+    if isinstance(w, Canvas):
+        bits.append('%d item(s)' % len(w._items))
+    if isinstance(w, Menu):
+        bits.append('entries=%r' % ([e.get('label', e['type']) for e in w._entries if e['type'] != 'tearoff'],))
+    if 'width' in w._optvals or 'height' in w._optvals:
+        if isinstance(w, (Canvas, Frame, LabelFrame)):
+            bits.append('%sx%s' % (w._optvals.get('width', '?'), w._optvals.get('height', '?')))
+    lay = ''
+    if w._mgr:
+        items = ', '.join('%s=%s' % (k, v) for k, v in w._layout.items() if k not in ('_m', 'in'))
+        lay = '  [%s%s]' % (w._mgr, '(' + items + ')' if items else '')
+    return '%s %s%s' % (cls, ' '.join(bits), lay) if bits else '%s%s' % (cls, lay)
+
+def _render(root):
+    title = root.title() if hasattr(root, 'title') else ''
+    geo = getattr(root, '_geometry', None)
+    print("Tk %r%s" % (title, '  geometry=' + geo if geo else ''))
+    bar = root._optvals.get('menu')
+    if bar is not None:
+        print('menu bar: %s' % ', '.join(str(e.get('label', e['type'])) for e in bar._entries if e['type'] != 'tearoff'))
+    def walk(widget, prefix):
+        kids = widget.winfo_children()
+        for n, c in enumerate(kids):
+            last = n == len(kids) - 1
+            print('%s%s %s' % (prefix, '└─' if last else '├─', _describe(c)))
+            walk(c, prefix + ('   ' if last else '│  '))
+    walk(root, '')
+
+# ------------------------------------------------------------------- ttk
+def _make_ttk():
+    ttk = _types.ModuleType('tkinter.ttk')
+    class TtkMixin:
+        _ttk = True
+        def _init_flags(self):
+            self._flags = set()
+            st = self._optvals.get('state')
+            if st in ('disabled', 'readonly'):
+                self._flags.add(st)
+        def state(self, statespec=None):
+            if statespec is None:
+                return tuple(sorted(self._flags))
+            changed = []
+            for s in (statespec if not isinstance(statespec, str) else statespec.split()):
+                if s.startswith('!'):
+                    if s[1:] in self._flags:
+                        changed.append(s[1:])
+                    self._flags.discard(s[1:])
+                else:
+                    if s not in self._flags:
+                        changed.append('!' + s)
+                    self._flags.add(s)
+            return tuple(changed)
+        def instate(self, statespec, callback=None, *args, **kw):
+            ok = all((s[1:] not in self._flags) if s.startswith('!') else (s in self._flags) for s in statespec)
+            if ok and callback:
+                return callback(*args, **kw)
+            return ok
+        def _on_option(self, key, value):
+            if key == 'state' and hasattr(self, '_flags'):
+                self._flags.discard('disabled'); self._flags.discard('readonly')
+                if value in ('disabled', 'readonly'):
+                    self._flags.add(value)
+    def mk(name, base, extra=None, **attrs):
+        d = {'_kind': 'ttk.' + {'LabelFrame': 'Labelframe', 'PanedWindow': 'Panedwindow'}.get(name, name), '_ttk': True}
+        def init(self, master=None, **kw):
+            kw2 = dict(kw)
+            base.__init__(self, master, **kw2)
+            self._init_flags()
+        d['__init__'] = init
+        cls = type(name, (TtkMixin, base) + ((extra,) if extra else ()), d)
+        setattr(ttk, name, cls)
+        return cls
+    class _Basic:
+        pass
+    for nm, b in (('Frame', Frame), ('Label', Label), ('Button', Button), ('Checkbutton', Checkbutton), ('Radiobutton', Radiobutton),
+                  ('Entry', Entry), ('Scrollbar', Scrollbar), ('Spinbox', Spinbox), ('Scale', Scale)):
+        mk(nm, b)
+    class TtkScale(TtkMixin, Widget):
+        _kind = 'ttk.Scale'
+        def __init__(self, master=None, **kw):
+            val = kw.pop('value', None)
+            self._setup(master or _get_root(), None, kw)
+            self._init_flags()
+            self._v = float(self._optvals.get('from', 0))
+            var = self._optvals.get('variable')
+            if val is not None:
+                self._v = self._clamp(float(val))
+            elif isinstance(var, Variable) and var._value not in ('', None):
+                self._v = self._clamp(float(var._value))
+        def _clamp(self, v):
+            lo = float(self._optvals.get('from', 0))
+            hi = float(self._optvals.get('to', 1.0))
+            return max(min(lo, hi), min(max(lo, hi), v))
+        def get(self, x=None, y=None):
+            var = self._optvals.get('variable')
+            if isinstance(var, Variable) and var._value not in ('', None):
+                self._v = self._clamp(float(var._value))
+            return self._v
+        def set(self, value):
+            self._v = self._clamp(float(value))
+            var = self._optvals.get('variable')
+            if isinstance(var, Variable):
+                var.set(self._v)
+            cmd = self._optvals.get('command')
+            if callable(cmd):
+                _safe(self, cmd, str(self._v))
+    ttk.Scale = TtkScale
+    class TtkPaned(TtkMixin, Frame):
+        _kind = 'ttk.Panedwindow'
+        def __init__(self, master=None, **kw):
+            self._panes = []
+            Frame.__init__(self, master, **kw)
+            self._init_flags()
+        def add(self, child, **kw):
+            self._panes.append(child)
+        def insert(self, pos, child, **kw):
+            self._panes.insert(pos, child)
+        def panes(self):
+            return tuple(str(p) for p in self._panes)
+        def forget(self, pane):
+            self._panes = [p for p in self._panes if str(p) != str(pane) and p is not pane]
+    ttk.Panedwindow = ttk.PanedWindow = TtkPaned
+    ttk.Labelframe = ttk.LabelFrame = mk('LabelFrame', LabelFrame)
+    ttk.Separator = mk('Separator', Frame)
+    ttk.Sizegrip = mk('Sizegrip', Frame)
+    ttk.Frame._kind = 'ttk.Frame'
+    ttk.Separator._kind = 'ttk.Separator'
+    ttk.Sizegrip._kind = 'ttk.Frame'
+    def pad(cls):
+        return cls
+    class Combobox(TtkMixin, Entry):
+        _kind = 'ttk.Combobox'
+        def __init__(self, master=None, **kw):
+            Entry.__init__(self, master, **kw)
+            self._init_flags()
+        def _vals(self):
+            v = self._optvals.get('values', ())
+            return tuple(v.split()) if isinstance(v, str) else tuple(str(x) for x in v)
+        def current(self, newindex=None):
+            if newindex is None:
+                cur = self._cur()
+                vs = [str(v) for v in self._vals()]
+                return vs.index(cur) if cur in vs else -1
+            vs = self._vals()
+            if not 0 <= newindex < len(vs):
+                raise TclError('Index %s out of range' % newindex)
+            self._store(str(vs[newindex]))
+        def set(self, value):
+            self._store(str(value))
+        def cget(self, key):
+            if key == 'values':
+                return self._vals() if 'values' in self._optvals else ''
+            return Misc.cget(self, key)
+        __getitem__ = cget
+    ttk.Combobox = Combobox
+    class Progressbar(TtkMixin, Widget):
+        _kind = 'ttk.Progressbar'
+        def __init__(self, master=None, **kw):
+            self._setup(master or _get_root(), None, kw)
+            self._init_flags()
+            self._optvals.setdefault('value', 0.0)
+        def cget(self, key):
+            if key == 'value' and isinstance(self._optvals.get('variable'), Variable):
+                return self._optvals['variable'].get()
+            return Misc.cget(self, key)
+        __getitem__ = cget
+        def step(self, amount=None):
+            v = float(self._optvals.get('value', 0.0)) + (1.0 if amount is None else amount)
+            mx = float(self._optvals.get('maximum', 100.0))
+            self._optvals['value'] = v % mx if mx else v
+        def start(self, interval=None):
+            pass
+        def stop(self):
+            pass
+    ttk.Progressbar = Progressbar
+    class Notebook(TtkMixin, Widget):
+        _kind = 'ttk.Notebook'
+        def __init__(self, master=None, **kw):
+            self._tabs = []
+            self._current = None
+            self._setup(master or _get_root(), None, kw)
+            self._init_flags()
+        def add(self, child, **kw):
+            self._tabs.append([child, dict(kw)])
+            if self._current is None:
+                self._current = child
+        def insert(self, pos, child, **kw):
+            self._tabs.insert(pos, [child, dict(kw)])
+        def tabs(self):
+            return tuple(str(c) for c, _ in self._tabs)
+        def _find(self, tab):
+            if isinstance(tab, int):
+                if not 0 <= tab < len(self._tabs):
+                    raise TclError('Slave index %d out of bounds' % tab)
+                return self._tabs[tab]
+            for t in self._tabs:
+                if str(t[0]) == str(tab):
+                    return t
+            raise TclError('Invalid slave specification %s' % (tab,))
+        def select(self, tab_id=None):
+            if tab_id is None:
+                return str(self._current) if self._current is not None else ''
+            self._current = self._find(tab_id)[0]
+        def index(self, tab_id):
+            if tab_id == 'end':
+                return len(self._tabs)
+            if tab_id == 'current':
+                return self.index(self._current) if self._current is not None else None
+            t = self._find(tab_id)
+            return self._tabs.index(t)
+        def tab(self, tab_id, option=None, **kw):
+            t = self._find(tab_id)
+            if kw:
+                t[1].update(kw)
+                return None
+            if option is not None:
+                return t[1].get(option, '')
+            return dict(t[1])
+        def forget(self, tab_id):
+            t = self._find(tab_id)
+            self._tabs.remove(t)
+        hide = forget
+    ttk.Notebook = Notebook
+    class Treeview(TtkMixin, Widget):
+        _kind = 'ttk.Treeview'
+        def __init__(self, master=None, **kw):
+            self._nodes = {'': {'children': [], 'parent': None}}
+            self._n = 0
+            self._selection = ()
+            self._focus = ''
+            self._cols = {}
+            self._setup(master or _get_root(), None, kw)
+            self._init_flags()
+            cols = self._optvals.get('columns', ())
+            self._columns = tuple(cols.split()) if isinstance(cols, str) else tuple(cols)
+            self._heads = {}
+        def _conv(self, v):
+            if isinstance(v, str):
+                try:
+                    return int(v)
+                except ValueError:
+                    return v
+            return v
+        def insert(self, parent, index, iid=None, **kw):
+            if iid is None:
+                self._n += 1
+                iid = 'I%03X' % self._n
+            iid = str(iid)
+            if iid in self._nodes:
+                raise TclError('Item %s already exists' % iid)
+            vals = kw.get('values', ())
+            if isinstance(vals, str):
+                vals = tuple(vals.split())
+            node = {'children': [], 'parent': parent, 'opts': {'text': kw.get('text', ''), 'image': '', 'values': tuple(vals),
+                                                              'open': kw.get('open', 0), 'tags': kw.get('tags', ())}}
+            self._nodes[iid] = node
+            sib = self._nodes[parent]['children']
+            if index == 'end':
+                sib.append(iid)
+            else:
+                sib.insert(int(index), iid)
+            return iid
+        def get_children(self, item=None):
+            return tuple(self._nodes[item or '']['children'])
+        def item(self, item, option=None, **kw):
+            if item not in self._nodes or item == '':
+                raise TclError('Item %s not found' % item)
+            o = self._nodes[item]['opts']
+            if kw:
+                o.update(kw)
+                return None
+            if option is not None:
+                v = o.get(option, '')
+                return tuple(str(x) for x in v) if option == 'values' else v
+            d = dict(o)
+            d['values'] = [self._conv(x if not isinstance(x, float) else str(x)) for x in o['values']]
+            return d
+        def set(self, item, column=None, value=None):
+            node = self._nodes[item]['opts']
+            vals = list(node['values'])
+            names = list(self._columns)
+            if column is None:
+                return {c: str(vals[i]) for i, c in enumerate(names) if i < len(vals)}
+            i = names.index(column) if isinstance(column, str) and column in names else int(str(column).lstrip('#')) - 1
+            if value is None:
+                return str(vals[i])
+            while len(vals) <= i:
+                vals.append('')
+            vals[i] = value
+            node['values'] = tuple(vals)
+        def move(self, item, parent, index):
+            if item not in self._nodes:
+                raise TclError('Item %s not found' % item)
+            node = self._nodes[item]
+            self._nodes[node['parent']]['children'].remove(item)
+            sib = self._nodes[parent]['children']
+            if index == 'end':
+                sib.append(item)
+            else:
+                sib.insert(int(index), item)
+            node['parent'] = parent
+        reattach = move
+        def detach(self, *items):
+            for it in items:
+                node = self._nodes[it]
+                self._nodes[node['parent']]['children'].remove(it)
+                node['parent'] = ''
+                node['detached'] = True
+        def next(self, item):
+            sib = self._nodes[self._nodes[item]['parent']]['children']
+            i = sib.index(item)
+            return sib[i + 1] if i + 1 < len(sib) else ''
+        def prev(self, item):
+            sib = self._nodes[self._nodes[item]['parent']]['children']
+            i = sib.index(item)
+            return sib[i - 1] if i > 0 else ''
+        def _sel_event(self):
+            self.after_idle(lambda: self.event_generate('<<TreeviewSelect>>'))
+        def delete(self, *items):
+            for it in items:
+                if it in self._nodes:
+                    for ch in list(self._nodes[it]['children']):
+                        self.delete(ch)
+                    par = self._nodes[it]['parent']
+                    self._nodes[par]['children'].remove(it)
+                    del self._nodes[it]
+            self._selection = tuple(s for s in self._selection if s in self._nodes)
+        def selection(self):
+            return tuple(self._selection)
+        def selection_set(self, *items):
+            flat = items[0] if len(items) == 1 and isinstance(items[0], (list, tuple)) else items
+            self._selection = tuple(flat)
+            self._sel_event()
+        def selection_add(self, *items):
+            flat = items[0] if len(items) == 1 and isinstance(items[0], (list, tuple)) else items
+            self._selection += tuple(i for i in flat if i not in self._selection)
+            self._sel_event()
+        def selection_remove(self, *items):
+            self._selection = tuple(s for s in self._selection if s not in items)
+            self._sel_event()
+        def focus(self, item=None):
+            if item is None:
+                return self._focus
+            self._focus = item
+        def exists(self, item):
+            return item in self._nodes
+        def parent(self, item):
+            return self._nodes[item]['parent'] or ''
+        def index(self, item):
+            return self._nodes[self._nodes[item]['parent']]['children'].index(item)
+        def see(self, item):
+            pass
+        def heading(self, column, option=None, **kw):
+            h = self._heads.setdefault(str(column), {'text': '', 'anchor': 'center', 'command': ''})
+            if kw:
+                h.update(kw)
+                return None
+            return h.get(option, '') if option else dict(h)
+        def column(self, column, option=None, **kw):
+            c = self._cols.setdefault(str(column), {'width': 200, 'minwidth': 20, 'anchor': 'w', 'stretch': 1})
+            if kw:
+                if 'stretch' in kw:
+                    kw['stretch'] = 1 if kw['stretch'] in (True, 1, '1', 'true') else 0
+                c.update(kw)
+                return None
+            return c.get(option, '') if option else dict(c)
+        def tag_configure(self, tag, **kw):
+            pass
+        def yview(self, *a):
+            return (0.0, 1.0)
+    ttk.Treeview = Treeview
+    class Style:
+        def __init__(self, master=None):
+            self._r = master or _get_root()
+            if not hasattr(self._r, '_style_state'):
+                self._r._style_state = {'theme': 'default', 'conf': {}, 'map': {}}
+            self._st = self._r._style_state
+        @property
+        def _conf(self):
+            return self._st['conf'].setdefault(self._st['theme'], {})
+        @property
+        def _maps(self):
+            return self._st['map'].setdefault(self._st['theme'], {})
+        def theme_use(self, themename=None):
+            if themename is None:
+                return self._st['theme']
+            if themename not in self.theme_names():
+                raise TclError("can't find package ttk::theme::%s" % themename)
+            self._st['theme'] = themename
+        def theme_names(self):
+            return ('clam', 'alt', 'default', 'classic')
+        def configure(self, style, query_opt=None, **kw):
+            d = self._conf.setdefault(style, {})
+            if kw:
+                d.update(kw)
+                return None
+            return d.get(query_opt) if query_opt else dict(d)
+        def map(self, style, query_opt=None, **kw):
+            d = self._maps.setdefault(style, {})
+            if kw:
+                for k, v in kw.items():
+                    d[k.lstrip('-')] = list(v)
+                return {k: list(v) for k, v in d.items()}
+            if query_opt:
+                return list(d.get(query_opt, []))
+            return {k: list(v) for k, v in d.items()}
+        def lookup(self, style, option, state=None, default=None):
+            if state is not None:
+                flags = set(state if not isinstance(state, str) else state.split())
+                for spec, value in self._maps.get(style, {}).get(option, []):
+                    specs = spec.split() if isinstance(spec, str) else list(spec)
+                    if all((x[1:] not in flags) if x.startswith('!') else (x in flags) for x in specs):
+                        return value
+            v = self._conf.get(style, {}).get(option, default)
+            return ' '.join(str(x) for x in v) if isinstance(v, (tuple, list)) else v
+    ttk.Style = Style
+    ttk.TclError = TclError
+    return ttk
+
+# ------------------------------------------------------- dialogs and others
+def _make_messagebox():
+    m = _types.ModuleType('tkinter.messagebox')
+    def mk(name, result):
+        def f(title=None, message=None, **options):
+            print('[dialog] %s: %s - %s' % (name, title, message))
+            return result
+        f.__name__ = name
+        setattr(m, name, f)
+    for n in ('showinfo', 'showwarning', 'showerror'):
+        mk(n, 'ok')
+    for n in ('askyesno', 'askokcancel', 'askretrycancel'):
+        mk(n, True)
+    mk('askquestion', 'yes')
+    mk('askyesnocancel', True)
+    for k, v in (('OK', 'ok'), ('YES', 'yes'), ('NO', 'no'), ('CANCEL', 'cancel'), ('RETRY', 'retry')):
+        setattr(m, k, v)
+    return m
+
+def _make_filedialog():
+    m = _types.ModuleType('tkinter.filedialog')
+    def mk(name, result):
+        def f(*a, **options):
+            print('[dialog] %s %s' % (name, options.get('title', '')))
+            return result
+        f.__name__ = name
+        setattr(m, name, f)
+    for n in ('askopenfilename', 'asksaveasfilename', 'askdirectory'):
+        mk(n, '')
+    mk('askopenfilenames', ())
+    return m
+
+def _make_simpledialog():
+    m = _types.ModuleType('tkinter.simpledialog')
+    for n, r in (('askstring', None), ('askinteger', None), ('askfloat', None)):
+        def f(title, prompt, _n=n, **kw):
+            print('[dialog] %s: %s - %s' % (_n, title, prompt))
+            return None
+        f.__name__ = n
+        setattr(m, n, f)
+    return m
+
+def _make_colorchooser():
+    m = _types.ModuleType('tkinter.colorchooser')
+    def askcolor(color=None, **options):
+        print('[dialog] askcolor')
+        return (None, None)
+    m.askcolor = askcolor
+    return m
+
+def _make_font():
+    m = _types.ModuleType('tkinter.font')
+    _named = {}
+    def _named_opts(name):
+        if name not in _named:
+            fixed = name == 'TkFixedFont'
+            _named[name] = {'family': 'Courier' if fixed else 'sans-serif', 'size': 10, 'weight': 'bold' if name in ('TkCaptionFont', 'TkHeadingFont') else 'normal', 'slant': 'roman', 'underline': 0, 'overstrike': 0}
+        return _named[name]
+    _NAMES = ('TkDefaultFont', 'TkTextFont', 'TkFixedFont', 'TkMenuFont', 'TkHeadingFont', 'TkCaptionFont', 'TkSmallCaptionFont', 'TkIconFont', 'TkTooltipFont')
+    def _int(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            raise TclError('expected integer but got "%s"' % (v,))
+    class Font:
+        def __init__(self, root=None, font=None, name=None, exists=False, **options):
+            if name is not None and (exists or name in _NAMES):
+                if name not in _NAMES and name not in _named:
+                    raise TclError('named font %s does not already exist' % name)
+                self._o = _named_opts(name)
+            else:
+                self._o = {'family': 'sans-serif', 'size': 10, 'weight': 'normal', 'slant': 'roman', 'underline': 0, 'overstrike': 0}
+                if name is not None:
+                    _named[name] = self._o
+            self.name = name
+            self.configure(**options)
+        def cget(self, k): return self._o[k]
+        __getitem__ = cget
+        def __setitem__(self, k, v): self.configure(**{k: v})
+        def configure(self, **kw):
+            for k, v in kw.items():
+                if k not in self._o:
+                    raise TclError('bad option "-%s": must be -family, -size, -weight, -slant, -underline, or -overstrike' % k)
+                self._o[k] = _int(v) if k == 'size' else v
+        config = configure
+        def actual(self, option=None): return self._o.get(option) if option else dict(self._o)
+        def measure(self, text): return int(abs(self._o['size']) * 0.9 * len(text))
+        def metrics(self, option=None):
+            d = {'ascent': 12, 'descent': 4, 'linespace': 16, 'fixed': 0}
+            return d.get(option) if option else d
+        def copy(self): return Font(**self._o)
+    def nametofont(name, root=None):
+        if name not in _NAMES and name not in _named:
+            raise TclError('named font %s does not already exist' % name)
+        return Font(name=name, exists=True)
+    m.Font = Font
+    m.nametofont = nametofont
+    m.families = lambda root=None: ('Arial', 'Courier New', 'Segoe UI', 'Times New Roman')
+    m.names = lambda root=None: tuple(sorted(set(_NAMES) | set(_named)))
+    m.NORMAL = 'normal'; m.BOLD = 'bold'; m.ITALIC = 'italic'; m.ROMAN = 'roman'
+    return m
+
+def _install():
+    mod = _types.ModuleType('tkinter')
+    me = globals()
+    for k, v in me.items():
+        if not k.startswith('_') or k in ('_default_root',):
+            pass
+    ns = {k: v for k, v in me.items() if not k.startswith('__')}
+    mod.__dict__.update(ns)
+    mod.TclError = TclError
+    mod.ttk = _make_ttk()
+    mod.messagebox = _make_messagebox()
+    mod.filedialog = _make_filedialog()
+    mod.simpledialog = _make_simpledialog()
+    mod.colorchooser = _make_colorchooser()
+    mod.font = _make_font()
+    mod.__path__ = []
+    mod.__file__ = 'tkinter'
+    # share module state so Variable()/Tk() can see the default root through the module
+    for name in ('Misc', 'Widget', 'Variable', 'Tk'):
+        pass
+    _sys.modules['tkinter'] = mod
+    for sub in ('ttk', 'messagebox', 'filedialog', 'simpledialog', 'colorchooser', 'font'):
+        _sys.modules['tkinter.' + sub] = getattr(mod, sub)
+    _sys.modules['tkinter.constants'] = mod
+    return mod
+
+_install()

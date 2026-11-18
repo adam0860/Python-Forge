@@ -119,6 +119,12 @@
 .continue-card.course-pyml {
   background: linear-gradient(140deg, color-mix(in srgb, var(--pyml-1) 12%, var(--surface)), var(--surface) 60%);
 }
+.continue-card.course-pygame {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--pygame-1) 12%, var(--surface)), var(--surface) 60%);
+}
+.continue-card.course-tkinter {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--tkinter-1) 12%, var(--surface)), var(--surface) 60%);
+}
 .continue-top {
   display: flex;
   align-items: center;
@@ -229,6 +235,12 @@
 }
 .course-card.course-pyml {
   background: linear-gradient(135deg, #134e4a, #0d9488 50%, #22d3ee);
+}
+.course-card.course-pygame {
+  background: linear-gradient(135deg, #78350f, #d97706 50%, #fbbf24);
+}
+.course-card.course-tkinter {
+  background: linear-gradient(135deg, #172554, #2563eb 50%, #38bdf8);
 }
 .course-card-top {
   display: flex;
@@ -345,6 +357,14 @@
   background: color-mix(in srgb, var(--pyml-1) 15%, transparent);
   color: color-mix(in srgb, var(--pyml-1) 70%, var(--text));
 }
+.course-tab.on.course-pygame {
+  background: color-mix(in srgb, var(--pygame-1) 15%, transparent);
+  color: color-mix(in srgb, var(--pygame-1) 70%, var(--text));
+}
+.course-tab.on.course-tkinter {
+  background: color-mix(in srgb, var(--tkinter-1) 15%, transparent);
+  color: color-mix(in srgb, var(--tkinter-1) 70%, var(--text));
+}
 .course-hero {
   position: relative;
   overflow: hidden;
@@ -362,6 +382,12 @@
 }
 .course-hero.course-pyml {
   background: linear-gradient(135deg, #134e4a, #0f766e 50%, #0891b2);
+}
+.course-hero.course-pygame {
+  background: linear-gradient(135deg, #78350f, #b45309 50%, #d97706);
+}
+.course-hero.course-tkinter {
+  background: linear-gradient(135deg, #172554, #1d4ed8 50%, #0284c7);
 }
 .course-hero::before {
   content: '';
@@ -1114,6 +1140,14 @@
   background: color-mix(in srgb, var(--pyml-1) 16%, transparent);
   color: color-mix(in srgb, var(--pyml-1) 75%, var(--text));
 }
+.sheet-card.course-pygame .sheet-badge {
+  background: color-mix(in srgb, var(--pygame-1) 16%, transparent);
+  color: color-mix(in srgb, var(--pygame-1) 75%, var(--text));
+}
+.sheet-card.course-tkinter .sheet-badge {
+  background: color-mix(in srgb, var(--tkinter-1) 16%, transparent);
+  color: color-mix(in srgb, var(--tkinter-1) 75%, var(--text));
+}
 
 /* --------------------------------------------------------------- Details */
 .back-bar {
@@ -1150,6 +1184,14 @@
 .course-badge.pyml {
   background: color-mix(in srgb, var(--pyml-1) 16%, transparent);
   color: color-mix(in srgb, var(--pyml-1) 75%, var(--text));
+}
+.course-badge.pygame {
+  background: color-mix(in srgb, var(--pygame-1) 16%, transparent);
+  color: color-mix(in srgb, var(--pygame-1) 75%, var(--text));
+}
+.course-badge.tkinter {
+  background: color-mix(in srgb, var(--tkinter-1) 16%, transparent);
+  color: color-mix(in srgb, var(--tkinter-1) 75%, var(--text));
 }
 .course-badge.all {
   background: color-mix(in srgb, #10b981 14%, transparent);

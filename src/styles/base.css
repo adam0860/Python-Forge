@@ -417,6 +417,12 @@ a {
 .bar.course-pyml .bar-fill {
   background: linear-gradient(90deg, var(--pyml-1), var(--pyml-2));
 }
+.bar.course-tkinter .bar-fill {
+  background: linear-gradient(90deg, var(--tkinter-1), var(--tkinter-2));
+}
+.bar.course-pygame .bar-fill {
+  background: linear-gradient(90deg, var(--pygame-1), var(--pygame-2));
+}
 
 .ring-track {
   stroke: var(--surface-3);

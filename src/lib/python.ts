@@ -21,6 +21,8 @@ export interface RunOptions {
   /** Exact stdout the program must print (trailing whitespace ignored). */
   expectOutput?: string;
   packages?: string[];
+  /** Hidden Python run before the code, in the same namespace. */
+  setup?: string;
   timeoutMs?: number;
   onOutput?: (stream: 'stdout' | 'stderr', text: string) => void;
   onStatus?: (text: string) => void;
@@ -204,6 +206,7 @@ export function runPython(code: string, opts: RunOptions = {}): { done: Promise<
           tests: opts.tests,
           expectOutput: opts.expectOutput,
           packages: opts.packages,
+          setup: opts.setup,
         });
       });
     });

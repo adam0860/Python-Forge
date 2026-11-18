@@ -45,7 +45,7 @@ const definedIds = new Set(glossary.map((g) => g.id));
 const resolvable = (id: string) => definedIds.has(id) || (partial && masterIds.has(id));
 
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const PREFIX: Record<string, string> = { python: 'py-', pyml: 'ml-' };
+const PREFIX: Record<string, string> = { python: 'py-', pyml: 'ml-', tkinter: 'tk-', pygame: 'pg-' };
 
 // ----------------------------------------------------------------------- TeX
 function checkTex(where: string, tex: string, display = false) {

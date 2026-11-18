@@ -1,10 +1,12 @@
 import type { Course, CourseId, GlossaryEntry, Lesson, Unit } from './types';
 import { pythonCourse } from './python';
 import { pymlCourse } from './pyml';
+import { tkinterCourse } from './tkinter';
+import { pygameCourse } from './pygame';
 import { glossary } from './glossary';
 import { cheatSheets } from './cheatsheets';
 
-export const courses: Course[] = [pythonCourse, pymlCourse];
+export const courses: Course[] = [pythonCourse, pymlCourse, tkinterCourse, pygameCourse];
 
 /** Short label for a course id ("Python"), or "All courses" for shared glossary terms. */
 export function courseLabel(id: CourseId | 'all'): string {

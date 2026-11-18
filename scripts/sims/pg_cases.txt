@@ -1,0 +1,525 @@
+R = pygame.Rect
+result = [R(1,2,3,4), R((1,2),(3,4)), R((1,2,3,4)), R(R(5,6,7,8)), R(1.9,2.9,3.9,4.9), R(-1.9,-2.9,3,4), R([1,2,3,4])]
+---
+R = pygame.Rect
+r = R(10, 20, 5, 7)
+result = [r.x, r.y, r.w, r.h, r.left, r.top, r.right, r.bottom, r.width, r.height, r.center, r.centerx, r.centery, r.topleft, r.topright, r.bottomleft, r.bottomright, r.midtop, r.midleft, r.midbottom, r.midright, r.size]
+---
+R = pygame.Rect
+out = []
+for attr, val in [('x',3),('y',4),('w',9),('h',11),('left',3),('top',4),('width',9),('height',11),('right',30),('bottom',40),('centerx',50),('centery',60),('center',(50,60)),('topleft',(1,2)),('topright',(30,2)),('bottomleft',(1,40)),('bottomright',(30,40)),('midtop',(15,2)),('midleft',(1,25)),('midbottom',(15,40)),('midright',(30,25)),('size',(8,9))]:
+    r = R(10, 20, 5, 7)
+    setattr(r, attr, val)
+    out.append((attr, tuple(r)))
+result = out
+---
+R = pygame.Rect
+r = R(0, 0, 4, 6)
+r.center = (10.9, -3.9)
+r2 = R(10, 20, 5, 7)
+r2.centerx = 7.7
+result = [tuple(r), tuple(r2), tuple(R(3,3,-5,-7).center)]
+---
+R = pygame.Rect
+r = R(10, 10, 20, 10)
+result = [r.move(5, -3), r.move((5, -3)), r.move(1.9, 2.9), r.inflate(10, 6), r.inflate(-10, -6), r.inflate(5, 3), r.inflate(-5, -3), r.inflate(-30, 0), r.inflate((4,2))]
+---
+R = pygame.Rect
+r = R(10, 10, 20, 10)
+r.move_ip(3, 4); a = tuple(r)
+r.inflate_ip(4, 4); b = tuple(r)
+r.update(1, 2, 3, 4); c = tuple(r)
+r.update((5,6),(7,8)); d = tuple(r)
+result = [a, b, c, d]
+---
+R = pygame.Rect
+out = []
+screen = R(0, 0, 100, 80)
+for r in [R(-10, 5, 20, 20), R(95, 70, 20, 20), R(10, 10, 20, 20), R(0, 0, 200, 10), R(40, -20, 10, 5), R(0,0,101,80), R(30,30,0,0)]:
+    out.append(tuple(r.clamp(screen)))
+q = R(-10, 5, 20, 20); q.clamp_ip(screen)
+out.append(tuple(q))
+result = out
+---
+R = pygame.Rect
+a = R(0, 0, 10, 10)
+out = []
+for b in [R(5,5,10,10), R(10,0,5,5), R(-5,-5,10,10), R(2,2,3,3), R(20,20,5,5), R(-3,2,20,3), R(0,0,10,10), R(5,-5,2,30), R(9,9,10,10), R(0,0,0,0)]:
+    out.append((tuple(a.clip(b)), tuple(b.clip(a))))
+result = out
+---
+R = pygame.Rect
+a = R(0, 0, 10, 10)
+out = []
+for b in [R(5,5,10,10), R(20,20,5,5), R(-5,-5,3,3), R(2,2,3,3), R(0,0,0,0)]:
+    out.append((tuple(a.union(b)), a.contains(b), b.contains(a)))
+out.append(tuple(a.unionall([R(30,0,5,5), R(0,40,5,5)])))
+c = R(1,1,2,2); c.union_ip(R(10,10,2,2)); out.append(tuple(c))
+c = R(1,1,2,2); c.unionall_ip([R(10,10,2,2), R(-5,0,1,1)]); out.append(tuple(c))
+result = out
+---
+R = pygame.Rect
+out = []
+for me, other in [(R(0,0,100,50), R(0,0,40,40)), (R(0,0,10,50), R(5,5,40,40)), (R(0,0,20,20), R(10,10,50,100)), (R(0,0,7,3), R(2,2,20,20))]:
+    out.append(tuple(me.fit(other)))
+result = out
+---
+R = pygame.Rect
+r = R(10, 10, 20, 10)
+pts = [(10,10),(29,19),(30,19),(29,20),(9,10),(10,9),(15.5,12.5),(29.9,19.9),(30.0,10),(-0.5,0),(10.4,10.4),(9.6,10)]
+result = [(p, r.collidepoint(p), r.collidepoint(*p)) for p in pts]
+---
+R = pygame.Rect
+a = R(0, 0, 10, 10)
+cases = [R(5,5,10,10), R(10,0,5,5), R(-5,-5,5,5), R(9,9,1,1), R(0,0,0,0), R(5,5,0,5), R(-5,-5,10,10), R(0,0,10,10), R(3,3,-5,-5), R(20,20,-15,-15), R(0,10,10,10)]
+result = [(tuple(b), a.colliderect(b), b.colliderect(a)) for b in cases]
+---
+R = pygame.Rect
+a = R(0, 0, 10, 10)
+lst = [R(20,20,5,5), R(5,5,5,5), R(9,9,3,3), R(-1,-1,2,2)]
+d = {'a': R(20,20,5,5), 'b': R(5,5,5,5), 'c': R(9,9,3,3)}
+result = [a.collidelist(lst), a.collidelistall(lst), R(100,100,1,1).collidelist(lst), R(100,100,1,1).collidelistall(lst), a.collidelist([(5,5,2,2)]), a.collidedict(d, True), a.collidedictall(d, True), R(100,100,1,1).collidedict(d, True)]
+---
+R = pygame.Rect
+r = R(5, 6, -3, -4)
+r.normalize()
+result = [tuple(r)]
+---
+R = pygame.Rect
+r = R(1, 2, 3, 4)
+result = [repr(r), str(r), len(r), r[0], r[-1], r[1:3], list(r), tuple(r), r == R(1,2,3,4), r == (1,2,3,4), r != R(1,2,3,5), r == 5, bool(r), bool(R(0,0,0,0)), bool(R(1,1,0,4)), bool(R(0,0,3,4)), r.copy() == r, r.copy() is r]
+---
+R = pygame.Rect
+r = R(1, 2, 3, 4)
+r[0] = 9
+r[-1] = 8
+x, y, w, h = r
+result = [tuple(r), x, y, w, h]
+---
+R = pygame.Rect
+try:
+    R()
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+R = pygame.Rect
+try:
+    R(1, 2, 3)
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+R = pygame.Rect
+r = R(0,0,1,1)
+try:
+    r[4]
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+R = pygame.Rect
+r = R(0,0,1,1)
+try:
+    r.x = 'a'
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+R = pygame.Rect
+r = R(0,0,1,1)
+try:
+    r.foo = 3
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+R = pygame.Rect
+r = R(0,0,1,1)
+try:
+    hash(r)
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+class Thing:
+    def __init__(self): self.rect = pygame.Rect(1,2,3,4)
+R = pygame.Rect
+result = [R(Thing()), R(0,0,5,5).colliderect(Thing()), tuple(R(0,0,5,5).union(Thing()))]
+---
+V = pygame.math.Vector2
+result = [V(), V(1, 2), V((3, 4)), V(5), V(V(1,2)), V(1.5, 2.25), V([7, 8]), V(1/3, 2/3), V(1e-7, 1e7), V(-0.0, 0), V(100000.5, 1234567.0)]
+---
+V = pygame.math.Vector2
+v = V(3, 4)
+result = [str(v), repr(v), len(v), v[0], v[1], v[-1], v.x, v.y, tuple(v), list(v), v[0:2], v.xy, v.length(), v.length_squared(), v.magnitude(), v.magnitude_squared(), abs(v)]
+---
+V = pygame.math.Vector2
+a, b = V(1, 2), V(3, 5)
+result = [a + b, a - b, a * 2, 2 * a, a / 2, a // 2, -a, +a, a * b, a + (1, 1), (1, 1) + a, a - (1, 1), (10, 10) - a, a == V(1, 2), a != b, a == (1, 2), a == (1.0000001, 2), a == (1.00001, 2), bool(V(0,0)), bool(a), a == 5]
+---
+V = pygame.math.Vector2
+out = []
+for f in [lambda: V(1,2) / 0, lambda: V(1,2) // 0, lambda: V(0,0).normalize(), lambda: V(0,0).scale_to_length(3), lambda: V(1,2) + 'a', lambda: V(1,2,3), lambda: V('a'), lambda: V(1,2)[2], lambda: V(1,2).lerp((3,4), 1.5), lambda: V(1,2).reflect((0,0)), lambda: V(1,2) * 'a']:
+    try:
+        out.append(repr(f()))
+    except Exception as e:
+        out.append((type(e).__name__, str(e)))
+result = out
+---
+V = pygame.math.Vector2
+v = V(3, 4)
+n = v.normalize()
+w = V(3, 4); w.normalize_ip()
+s = V(3, 4); s.scale_to_length(10)
+result = [n, w, n.length(), s, s.length(), v.is_normalized(), n.is_normalized(), V(0, 5).normalize(), V(-3, 0).normalize()]
+---
+V = pygame.math.Vector2
+a, b = V(1, 2), V(4, 6)
+result = [a.distance_to(b), a.distance_squared_to(b), a.dot(b), a.cross(b), b.cross(a), a.dot((1, 0)), a.distance_to((4, 6)), V(1,0).angle_to(V(0,1)), V(0,1).angle_to(V(1,0)), V(1,0).angle_to(V(-1,0)), V(1,1).angle_to((1,-1)), V(1,0).angle_to((-1,-0.0001)), V(-1,-0.0001).angle_to((1, 0))]
+---
+V = pygame.math.Vector2
+out = []
+for ang in (0, 90, 180, 270, 360, -90, 45, 30, 1, 450):
+    r = V(1, 0).rotate(ang)
+    out.append((ang, round(r.x, 6), round(r.y, 6)))
+v = V(2, 1); v.rotate_ip(90)
+out.append((round(v.x, 6), round(v.y, 6)))
+r = V(1,0).rotate_rad(3.141592653589793/2)
+out.append((round(r.x, 6), round(r.y, 6)))
+result = out
+---
+V = pygame.math.Vector2
+out = []
+for v, nrm in [((1,-1),(0,1)), ((3,4),(1,0)), ((2,2),(-1,-1)), ((1,0),(0,2))]:
+    r = V(v).reflect(nrm)
+    out.append((round(r.x, 6), round(r.y, 6)))
+a, b = V(0, 0), V(10, 20)
+out += [a.lerp(b, 0.5), a.lerp(b, 0), a.lerp(b, 1), V(1,1).lerp((3,5), 0.25)]
+result = out
+---
+V = pygame.math.Vector2
+out = []
+v = V(3, 4)
+out.append(v.clamp_magnitude(2))
+out.append(v.clamp_magnitude(10))
+out.append(v.clamp_magnitude(1, 2))
+out.append(v.clamp_magnitude(6, 10))
+out.append(V(0,0).clamp_magnitude(5))
+out.append(V(0,0).move_towards((10, 0), 3))
+out.append(V(0,0).move_towards((10, 0), 30))
+out.append(V(0,0).move_towards((3, 4), 2.5))
+out.append(V(5,5).move_towards((5, 5), 1))
+out.append(V(0,0).move_towards((10, 0), -3))
+result = out
+---
+V = pygame.math.Vector2
+out = []
+v = V(0, 0)
+v.from_polar((2, 90))
+out.append((round(v.x, 6), round(v.y, 6)))
+p = V(1, 1).as_polar()
+out.append((round(p[0], 6), round(p[1], 6)))
+out.append(tuple(round(c, 6) for c in V(-1, 0).as_polar()))
+out.append(tuple(round(c, 6) for c in V(0, -2).as_polar()))
+v = V(1, 2); v.update(5, 6); out.append(v)
+v.update((7, 8)); out.append(v)
+v.x = 9; v[1] = 10; out.append(v)
+c = v.copy(); c.x = 0; out.append((v, c))
+out.append(V(3,4).project((1, 0)))
+out.append(V(3,4).project((0, 5)))
+result = out
+---
+V = pygame.math.Vector2
+out = []
+x, y = V(7, 8)
+out.append((x, y))
+r = pygame.Rect(0, 0, 10, 10)
+r.center = V(20, 30)
+out.append(tuple(r))
+out.append(r.collidepoint(V(21, 31)))
+out.append(pygame.math.lerp(0, 10, 0.25))
+out.append(pygame.math.clamp(15, 0, 10))
+out.append(pygame.math.clamp(-5, 0, 10))
+out.append(pygame.Vector2(1, 2) == pygame.math.Vector2(1, 2))
+result = out
+---
+C = pygame.Color
+out = []
+for args in [(1,2,3), (1,2,3,4), ((5,6,7),), ((5,6,7,8),), ('#ff8000',), ('#ff800080',), ('0xff8000',), ('red',), ('Red',), ('dark green',), ('darkgreen',), ('gray',), ('grey',), (0x11223344,), (C(9,8,7),)]:
+    try:
+        c = C(*args)
+        out.append((tuple(c), c.r, c.g, c.b, c.a))
+    except Exception as e:
+        out.append((type(e).__name__, str(e)))
+result = out
+---
+C = pygame.Color
+out = []
+for f in [lambda: C(256, 0, 0), lambda: C(-1, 0, 0), lambda: C('nocolor'), lambda: C('#12'), lambda: C(1, 2), lambda: C(1.5, 2, 3), lambda: C(None), lambda: C([1,2,3,4,5])]:
+    try:
+        out.append(repr(f()))
+    except Exception as e:
+        out.append((type(e).__name__, str(e)))
+result = out
+---
+C = pygame.Color
+c = C(255, 128, 0)
+result = [repr(c), str(c), len(c), c[0], c[3], c == (255, 128, 0), c == (255, 128, 0, 255), c == (255, 128, 0, 0), c == C(255, 128, 0), c != C(0,0,0), tuple(c), list(c), c.lerp((0, 0, 0), 0.5), C(0,0,0).lerp((255,255,255), 0.3), c.normalize()]
+---
+S = pygame.Surface
+s = S((4, 3))
+out = [s.get_size(), s.get_width(), s.get_height(), tuple(s.get_rect()), tuple(s.get_rect(center=(10, 10))), tuple(s.get_rect(topleft=(5, 6))), tuple(s.get_at((0, 0))), s.get_flags() & pygame.SRCALPHA]
+s.fill((10, 20, 30))
+out += [tuple(s.get_at((3, 2))), tuple(s.fill((1,2,3), (1, 1, 2, 2))), tuple(s.get_at((0, 0))), tuple(s.get_at((1, 1))), tuple(s.get_at((2, 2))), tuple(s.get_at((3, 2)))]
+s.set_at((0, 0), (255, 0, 0)); s.set_at((9, 9), (1, 1, 1)); s.set_at((1, 0), (0, 255, 0, 17))
+out += [tuple(s.get_at((0, 0))), tuple(s.get_at((1, 0)))]
+result = out
+---
+S = pygame.Surface
+s = S((4, 3), pygame.SRCALPHA)
+out = [tuple(s.get_at((0, 0))), s.get_flags() & pygame.SRCALPHA != 0]
+s.fill((10, 20, 30, 40))
+out.append(tuple(s.get_at((1, 1))))
+s.set_at((1, 1), (1, 2, 3, 4))
+out.append(tuple(s.get_at((1, 1))))
+result = out
+---
+S = pygame.Surface
+s = S((4, 3))
+for fn in (lambda: s.get_at((4, 0)), lambda: s.get_at((-1, 0)), lambda: S((-1, 2)), lambda: s.subsurface((0, 0, 9, 9)), lambda: S('x')):
+    try:
+        fn()
+        print('no error')
+    except Exception as e:
+        print(type(e).__name__, str(e))
+result = 1
+---
+S = pygame.Surface
+dst = S((6, 6)); dst.fill((0, 0, 0))
+src = S((3, 3)); src.fill((255, 0, 0))
+r1 = dst.blit(src, (1, 1))
+r2 = dst.blit(src, (4, 4))
+r3 = dst.blit(src, (-2, -2))
+r4 = dst.blit(src, (10, 10))
+r5 = dst.blit(src, pygame.Rect(2, 0, 9, 9))
+r6 = dst.blit(src, (0, 3), pygame.Rect(1, 1, 1, 1))
+result = [tuple(r1), tuple(r2), tuple(r3), tuple(r4), tuple(r5), tuple(r6), [[tuple(dst.get_at((x, y)))[0] for x in range(6)] for y in range(6)]]
+---
+S = pygame.Surface
+dst = S((5, 5)); dst.fill((0, 0, 255))
+src = S((3, 3)); src.fill((255, 0, 255)); src.set_at((1, 1), (0, 255, 0))
+src.set_colorkey((255, 0, 255))
+dst.blit(src, (1, 1))
+result = [[tuple(dst.get_at((x, y)))[:3] for x in range(5)] for y in range(5)], tuple(src.get_colorkey()), S((1,1)).get_colorkey()
+---
+S = pygame.Surface
+dst = S((4, 4)); dst.fill((100, 100, 100))
+src = S((2, 2), pygame.SRCALPHA)
+src.fill((200, 0, 0, 255))
+src.set_at((1, 1), (0, 200, 0, 0))
+dst.blit(src, (1, 1))
+src2 = S((2, 2), pygame.SRCALPHA); src2.fill((200, 0, 0, 128))
+dst.blit(src2, (0, 0))
+result = [[tuple(dst.get_at((x, y))) for x in range(4)] for y in range(4)]
+---
+S = pygame.Surface
+s = S((4, 4)); s.fill((0, 0, 0))
+sub = s.subsurface((1, 1, 2, 2))
+sub.fill((9, 9, 9))
+sub.set_at((0, 0), (5, 5, 5))
+c = s.copy(); c.fill((7, 7, 7))
+result = [[tuple(s.get_at((x, y)))[0] for x in range(4)] for y in range(4)], sub.get_size(), tuple(c.get_at((0, 0))), tuple(s.get_at((0, 0)))
+---
+S = pygame.Surface
+s = S((3, 2)); s.fill((0, 0, 0))
+s.set_at((0, 0), (1, 1, 1)); s.set_at((2, 1), (2, 2, 2))
+f = pygame.transform.flip(s, True, False); g = pygame.transform.flip(s, False, True); h = pygame.transform.flip(s, True, True); k = pygame.transform.flip(s, False, False)
+big = pygame.transform.scale(s, (6, 4))
+rows = lambda q: [[tuple(q.get_at((x, y)))[0] for x in range(q.get_width())] for y in range(q.get_height())]
+result = [rows(f), rows(g), rows(h), rows(k), rows(big), big.get_size(), rows(s)]
+---
+S = pygame.Surface
+def px(s): return [[tuple(s.get_at((x, y)))[0] for x in range(s.get_width())] for y in range(s.get_height())]
+s = S((8, 6)); s.fill((0, 0, 0))
+r1 = pygame.draw.rect(s, (255, 0, 0), (1, 1, 4, 3))
+a = px(s)
+s.fill((0, 0, 0))
+r2 = pygame.draw.rect(s, (255, 0, 0), (1, 1, 6, 4), 1)
+b = px(s)
+s.fill((0, 0, 0))
+r3 = pygame.draw.rect(s, (255, 0, 0), pygame.Rect(-2, -2, 5, 5))
+c = px(s)
+s.fill((0, 0, 0))
+r4 = pygame.draw.rect(s, (255, 0, 0), (0, 0, 8, 6), 2)
+d = px(s)
+s.fill((0, 0, 0))
+r5 = pygame.draw.rect(s, (255, 0, 0), (0, 0, 4, 4), 3)
+e = px(s)
+s.fill((0, 0, 0))
+r6 = pygame.draw.rect(s, (255, 0, 0), (6, 4, 10, 10))
+result = [tuple(r1), tuple(r2), tuple(r3), tuple(r4), tuple(r5), tuple(r6), a, b, c, d, e]
+---
+S = pygame.Surface
+def px(s): return [[tuple(s.get_at((x, y)))[0] for x in range(s.get_width())] for y in range(s.get_height())]
+out = []
+for st, en in [((1, 1), (6, 1)), ((2, 0), (2, 5)), ((6, 1), (1, 1)), ((0, 0), (5, 5)), ((0, 5), (5, 0))]:
+    s = S((8, 6)); s.fill((0, 0, 0))
+    r = pygame.draw.line(s, (255, 0, 0), st, en)
+    out.append((st, en, tuple(r), px(s)))
+result = out
+---
+S = pygame.Surface
+def pts(s): return [(x, y) for y in range(s.get_height()) for x in range(s.get_width()) if tuple(s.get_at((x, y)))[0]]
+out = []
+for rad in range(1, 9):
+    s = S((30, 30)); s.fill((0, 0, 0))
+    r = pygame.draw.circle(s, (255, 0, 0), (15, 15), rad)
+    out.append((rad, len(pts(s)), min(x for x, y in pts(s)), max(x for x, y in pts(s)), tuple(r)))
+result = out
+---
+S = pygame.Surface
+def pts(s): return [(x, y) for y in range(s.get_height()) for x in range(s.get_width()) if tuple(s.get_at((x, y)))[0]]
+out = []
+for rad, w in [(5, 1), (8, 2), (8, 3), (4, 4), (6, 6), (3, 0)]:
+    s = S((30, 30)); s.fill((0, 0, 0))
+    pygame.draw.circle(s, (255, 0, 0), (15, 15), rad, w)
+    p = pts(s)
+    out.append((rad, w, len(p), (15, 15) in p, (15, 15 + rad - 1) in p))
+result = out
+---
+E = pygame.event
+E.clear()
+e1 = E.Event(pygame.KEYDOWN, key=pygame.K_a)
+e2 = E.Event(pygame.USEREVENT, {'n': 5})
+e3 = E.Event(pygame.QUIT)
+for e in (e1, e2, e3):
+    E.post(e)
+result = [e1.type, e1.key, e2.n, e2.dict, e3.dict, e1 == E.Event(pygame.KEYDOWN, key=pygame.K_a), e1 == e2, E.peek(pygame.QUIT), E.peek(pygame.MOUSEMOTION), [x.type for x in E.get(pygame.QUIT)], len(E.get()), len(E.get()), E.get() == [], pygame.event.poll().type]
+---
+E = pygame.event
+E.clear()
+E.post(E.Event(pygame.KEYDOWN, key=1))
+E.post(E.Event(pygame.KEYUP, key=2))
+E.post(E.Event(pygame.QUIT))
+E.clear(pygame.KEYUP)
+a = [x.type for x in E.get([pygame.KEYDOWN, pygame.KEYUP])]
+b = [x.type for x in E.get()]
+E.post(E.Event(pygame.QUIT)); E.clear()
+result = [a, b, E.get(), E.poll().type == pygame.NOEVENT]
+---
+E = pygame.event
+e = E.Event(pygame.KEYDOWN, key=5)
+try:
+    e.nothing
+except Exception as ex:
+    r1 = (type(ex).__name__, str(ex))
+try:
+    E.post('x')
+except Exception as ex:
+    r1 = (r1, type(ex).__name__)
+result = [r1, E.event_name(pygame.KEYDOWN), E.event_name(pygame.QUIT), E.event_name(pygame.MOUSEBUTTONDOWN)]
+---
+a = pygame.event.custom_type(); b = pygame.event.custom_type()
+result = [b - a, a > pygame.USEREVENT]
+---
+K = pygame
+result = [K.K_LEFT, K.K_RIGHT, K.K_UP, K.K_DOWN, K.K_SPACE, K.K_ESCAPE, K.K_a, K.K_RETURN, K.K_z, K.K_0, K.K_w, K.KEYDOWN, K.QUIT, K.MOUSEBUTTONDOWN, K.USEREVENT, K.BUTTON_LEFT, K.KMOD_SHIFT, K.SRCALPHA, K.FULLSCREEN, K.K_LSHIFT, K.K_TAB, K.K_BACKSPACE, K.K_p, K.K_r, K.K_F1, K.MOUSEMOTION, K.MOUSEWHEEL, K.NUMEVENTS]
+---
+result = [pygame.key.name(pygame.K_a), pygame.key.name(pygame.K_SPACE), pygame.key.name(pygame.K_LEFT), pygame.key.name(pygame.K_RETURN), pygame.key.name(pygame.K_ESCAPE), pygame.key.name(pygame.K_0), pygame.key.name(pygame.K_LSHIFT), pygame.key.name(pygame.K_UP), pygame.key.name(pygame.K_TAB)]
+---
+keys = pygame.key.get_pressed()
+result = [keys[pygame.K_LEFT], keys[pygame.K_a], bool(keys[pygame.K_SPACE]), pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]]
+---
+from pygame.locals import *
+result = [K_a, QUIT, KEYDOWN, Rect(1,2,3,4), SRCALPHA]
+---
+import pygame.sprite as sp
+class P(sp.Sprite):
+    def __init__(self, x, y, w=10, h=10):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, w, h)
+        self.image = pygame.Surface((w, h))
+        self.hits = 0
+    def update(self, dx=0):
+        self.rect.x += dx
+        self.hits += 1
+g = sp.Group(); h = sp.Group()
+a, b, c = P(0, 0), P(5, 5), P(50, 50)
+g.add(a, b); h.add(c)
+out = [len(g), len(h), a in g, c in g, a.alive(), a.groups() == [g], g.has(a), g.has(a, b), g.has(c), bool(g), bool(sp.Group()), g.sprites() == [a, b], list(g) == [a, b]]
+g.update(3)
+out += [a.rect.x, b.rect.x, a.hits, c.hits]
+a.kill()
+out += [len(g), a.alive(), a in g, a.groups()]
+g.add(a); g.add(h); out.append(len(g))
+g.remove(h); out.append(len(g))
+g.remove(a); out.append([s is b for s in g])
+g.empty(); out.append((len(g), b.alive(), len(h)))
+k = sp.Group([a, b, c]); out.append(len(k))
+k2 = k.copy(); out.append((len(k2), k2 is k))
+a.add(g, h); out.append((len(g), len(h), len(a.groups())))
+a.remove(g); out.append((len(g), len(a.groups())))
+result = out
+---
+import pygame.sprite as sp
+class P(sp.Sprite):
+    def __init__(self, x, y, w=10, h=10):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, w, h)
+g = sp.Group(); e = sp.Group()
+p = P(0, 0)
+e1, e2, e3 = P(5, 5), P(8, 8), P(100, 100)
+e.add(e1, e2, e3)
+out = []
+out.append(sp.spritecollide(p, e, False) == [e1, e2])
+out.append(len(e))
+hits = sp.spritecollide(p, e, True)
+out.append((hits == [e1, e2], len(e), e1.alive(), e3.alive()))
+out.append(sp.spritecollideany(p, e))
+e.add(e1)
+out.append(sp.spritecollideany(p, e) is e1)
+out.append(sp.collide_rect(p, e1))
+q = P(0, 0, 4, 4); r = P(3, 3, 4, 4)
+out.append((sp.collide_rect(q, r), sp.collide_circle(q, r), sp.collide_circle_ratio(0.5)(q, r), sp.collide_rect_ratio(0.5)(q, r)))
+q.radius = 1; r.radius = 1
+out.append(sp.collide_circle(q, r))
+out.append(sp.spritecollide(q, sp.Group(r), False, sp.collide_circle))
+result = out
+---
+import pygame.sprite as sp
+class B(sp.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, 10, 10)
+bullets = sp.Group(); enemies = sp.Group()
+b1, b2, b3 = B(0, 0), B(100, 0), B(5, 5)
+e1, e2 = B(2, 2), B(105, 5)
+bullets.add(b1, b2, b3); enemies.add(e1, e2)
+hits = sp.groupcollide(bullets, enemies, True, True)
+result = [[(k is b1, k is b2, k is b3) for k in hits], [[v is e1 for v in vs] for vs in hits.values()], len(bullets), len(enemies), list(hits) == [b1, b2, b3] ]
+---
+import pygame.sprite as sp
+class Bad(sp.Sprite):
+    def __init__(self):
+        self.rect = pygame.Rect(0,0,1,1)
+g = sp.Group()
+try:
+    g.add(Bad())
+except Exception as e:
+    result = (type(e).__name__, str(e))
+---
+import pygame.sprite as sp
+class P(sp.Sprite):
+    def __init__(self, x):
+        super().__init__()
+        self.image = pygame.Surface((4, 4)); self.image.fill((255, 0, 0))
+        self.rect = self.image.get_rect(topleft=(x, 0))
+g = sp.Group(P(0), P(10))
+screen = pygame.Surface((20, 6)); screen.fill((0, 0, 0))
+rects = g.draw(screen)
+result = [[tuple(r) for r in rects], [[tuple(screen.get_at((x, y)))[0] for x in range(20)] for y in range(6)][0]]
+---
+c = pygame.time.Clock()
+out = [type(c.tick(60)), type(c.get_fps()), type(pygame.time.get_ticks())]
+pygame.display.set_caption('Hi')
+s = pygame.display.set_mode((320, 200))
+out += [s.get_size(), pygame.display.get_surface() is s, pygame.display.get_caption()[0]]
+pygame.display.flip()
+result = out
+---
+result = [pygame.Rect.__name__, pygame.math.Vector2.__name__, pygame.Surface.__name__, pygame.sprite.Sprite.__name__, pygame.Color.__name__, pygame.Vector2 is pygame.math.Vector2, pygame.Rect is pygame.rect.Rect, isinstance(pygame.Rect(0,0,1,1), pygame.Rect), isinstance(pygame.error('x'), Exception)]

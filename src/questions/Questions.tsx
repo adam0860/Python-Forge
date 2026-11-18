@@ -797,7 +797,7 @@ function CodeQ({ q, revealed, onReady, ref }: QProps<CodeQuestion>) {
   }, [revealed, verdict]);
 
   const runChecks = async (): Promise<boolean | null> => {
-    const r = await runner.run(code, { stdin: q.stdin, tests: q.tests?.trim() ? q.tests : 'pass', expectOutput: q.expectOutput, packages: q.packages });
+    const r = await runner.run(code, { stdin: q.stdin, tests: q.tests?.trim() ? q.tests : 'pass', expectOutput: q.expectOutput, packages: q.packages, setup: q.setup });
     if (r.cancelled) return null;
     if (r.timedOut) {
       setVerdict({ ok: false, message: 'Your program didn’t finish in time — look for a loop that never ends.' });
@@ -830,7 +830,7 @@ function CodeQ({ q, revealed, onReady, ref }: QProps<CodeQuestion>) {
               <button
                 type="button"
                 className={`run-btn sm${runner.running ? ' stop' : ''}`}
-                onClick={() => (runner.running ? runner.stop() : void runner.run(code, { stdin: q.stdin, packages: q.packages }))}
+                onClick={() => (runner.running ? runner.stop() : void runner.run(code, { stdin: q.stdin, packages: q.packages, setup: q.setup }))}
                 title="Run without checking (Ctrl+Enter)"
               >
                 <Icon name={runner.running ? 'stop' : 'play'} size={13} filled /> {runner.running ? 'Stop' : 'Try it'}
@@ -842,7 +842,7 @@ function CodeQ({ q, revealed, onReady, ref }: QProps<CodeQuestion>) {
           value={showSolution ? q.solution : code}
           onChange={setCode}
           readOnly={revealed}
-          onRun={() => void runner.run(code, { stdin: q.stdin, packages: q.packages })}
+          onRun={() => void runner.run(code, { stdin: q.stdin, packages: q.packages, setup: q.setup })}
           minLines={Math.max(4, q.starter.split('\n').length)}
         />
         {(runner.running || runner.chunks.length > 0) && <ConsoleView chunks={runner.chunks} running={runner.running} status={runner.status} />}

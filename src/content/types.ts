@@ -18,7 +18,7 @@
  * Paragraph breaks inside a single string: use "\n\n".
  */
 
-export type CourseId = 'python' | 'pyml';
+export type CourseId = 'python' | 'pyml' | 'tkinter' | 'pygame';
 
 /**
  * `python` — a Python source file. `pycon` — an interactive REPL session (lines
@@ -352,6 +352,11 @@ export interface CodeQuestion extends QuestionBase {
   /** If set, the program's stdout must equal this exactly (checked before `tests`). */
   expectOutput?: string;
   packages?: string[];
+  /**
+   * Hidden Python run in the same namespace before the learner's code, e.g. to install a
+   * stand-in for a library that cannot run in the browser (see src/content/sims.ts).
+   */
+  setup?: string;
 }
 
 export type QuestionStep =

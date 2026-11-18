@@ -1,0 +1,704 @@
+l = tk.Label(root, text='hi'); result = (l.cget('text'), l['text'], str(l), l.winfo_name(), l.winfo_class())
+---
+l = tk.Label(root, text='hi'); l.config(text='bye'); l['text'] = 'again'; l.configure(fg='red'); result = (l['text'], l.cget('fg'), l.cget('foreground'))
+---
+result = tk.Label(root, txet='x')
+---
+b = tk.Button(root, text='x', command=lambda: 5); result = (b.invoke(), b.pack(), b.winfo_manager())
+---
+b = tk.Button(root, text='x', command=lambda: None); result = b.invoke()
+---
+b = tk.Button(root, text='x', state='disabled', command=lambda: 5); result = b.invoke()
+---
+l = tk.Label(root); b = tk.Label(root); c = tk.Frame(root); result = (str(l), str(b), str(c), [w.winfo_name() for w in root.winfo_children()])
+---
+l = tk.Label(root, text='a'); l.pack(); result = l.pack_info()['side'], l.pack_info()['fill'], l.pack_info()['expand'], l.pack_info()['padx'], l.pack_info()['anchor']
+---
+l = tk.Label(root, text='a'); l.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5); i = l.pack_info(); result = (i['side'], i['fill'], i['expand'], i['padx'])
+---
+l = tk.Label(root); l.pack(side='up')
+---
+l = tk.Label(root); l.pack(fill='z')
+---
+l = tk.Label(root); l.pack(sid='left')
+---
+l = tk.Label(root); l.grid(row=1, column=2, sticky='we'); i = l.grid_info(); result = (i['row'], i['column'], i['sticky'], i['rowspan'], i['columnspan'])
+---
+a = tk.Label(root); b = tk.Label(root); a.grid(); b.grid(); result = (a.grid_info()['row'], b.grid_info()['row'], a.grid_info()['column'], b.grid_info()['column'])
+---
+a = tk.Label(root); b = tk.Label(root); a.grid(row=0, column=0); b.grid(column=1); result = (b.grid_info()['row'], b.grid_info()['column'])
+---
+a = tk.Label(root); b = tk.Label(root); a.pack(); b.grid()
+---
+a = tk.Label(root); b = tk.Label(root); a.grid(); b.pack()
+---
+f = tk.Frame(root); a = tk.Label(f); b = tk.Label(f); a.pack(); b.grid()
+---
+a = tk.Label(root); a.pack(); a.pack_forget(); b = tk.Label(root); b.grid(); result = (a.winfo_manager(), b.winfo_manager())
+---
+a = tk.Label(root); a.grid(sticky='nsew'); result = a.grid_info()['sticky']
+---
+a = tk.Label(root); a.grid(sticky='ws'); result = a.grid_info()['sticky']
+---
+root.columnconfigure(0, weight=1); result = (root.columnconfigure(0)['weight'], root.rowconfigure(3)['weight'], root.columnconfigure(0)['minsize'])
+---
+a = tk.Label(root); a.place(x=10, y=20); result = (a.winfo_manager(), a.place_info()['x'], a.place_info()['y'])
+---
+a = tk.Label(root); a.grid(row=0, column=0); b = tk.Label(root); b.grid(row=1, column=0); result = [w for w in root.grid_slaves(row=1)] == [b], root.grid_slaves() == [b, a]
+---
+e = tk.Entry(root); e.insert(0, 'hello'); e.insert(tk.END, ' world'); e.insert(0, '>'); result = (e.get(), e.index(tk.END))
+---
+e = tk.Entry(root); e.insert(0, 'hello'); e.delete(0, tk.END); result = repr(e.get())
+---
+e = tk.Entry(root); e.insert(0, 'hello'); e.delete(1, 3); result = e.get()
+---
+e = tk.Entry(root); e.insert(0, 'hello'); e.delete(2); result = e.get()
+---
+e = tk.Entry(root, state='disabled'); e.insert(0, 'x'); result = repr(e.get())
+---
+e = tk.Entry(root, show='*'); e.insert(0, 'secret'); result = (e.get(), e.cget('show'))
+---
+v = tk.StringVar(root, value='abc'); e = tk.Entry(root, textvariable=v); result = (e.get(),); e.insert(tk.END, 'd'); result = (e.get(), v.get())
+---
+v = tk.StringVar(root); e = tk.Entry(root, textvariable=v); v.set('hi'); result = e.get()
+---
+v = tk.StringVar(root); result = (v.get(), repr(v.get()), str(v)[:6])
+---
+v = tk.IntVar(root); result = (v.get(), type(v.get()).__name__)
+---
+v = tk.IntVar(root); v.set(5); v.set('7'); result = v.get()
+---
+v = tk.IntVar(root); v.set('abc'); result = v.get()
+---
+v = tk.IntVar(root); v.set(3.9); result = v.get()
+---
+v = tk.DoubleVar(root); v.set(2); result = (v.get(), type(v.get()).__name__)
+---
+v = tk.BooleanVar(root); result = (v.get(), type(v.get()).__name__); v.set(1); result += (v.get(),)
+---
+v = tk.StringVar(root, value=5); result = (v.get(), type(v.get()).__name__)
+---
+log = []; v = tk.StringVar(root); v.trace_add('write', lambda *a: log.append(a)); v.set('x'); v.set('y'); result = log[0][1:], len(log), log[0][2]
+---
+log = []; v = tk.StringVar(root); tid = v.trace_add('write', lambda *a: log.append(a)); v.trace_remove('write', tid); v.set('x'); result = len(log)
+---
+log = []; v = tk.StringVar(root); v.trace_add('write', lambda n, i, m: log.append(v.get())); e = tk.Entry(root, textvariable=v); e.insert(0, 'ab'); e.insert(tk.END, 'c'); result = log
+---
+c = tk.Checkbutton(root, text='x'); result = (c.invoke(), )
+---
+v = tk.IntVar(root); c = tk.Checkbutton(root, text='x', variable=v); c.invoke(); r1 = v.get(); c.invoke(); result = (r1, v.get())
+---
+v = tk.BooleanVar(root); c = tk.Checkbutton(root, variable=v); c.select(); r1 = v.get(); c.deselect(); result = (r1, v.get())
+---
+v = tk.StringVar(root); c = tk.Checkbutton(root, variable=v, onvalue='yes', offvalue='no'); c.select(); r1 = v.get(); c.toggle(); result = (r1, v.get())
+---
+v = tk.IntVar(root, value=2); r = [tk.Radiobutton(root, text=str(i), variable=v, value=i) for i in (1, 2, 3)]; r[0].invoke(); a = v.get(); r[2].select(); result = (a, v.get())
+---
+log = []; v = tk.IntVar(root); r = tk.Radiobutton(root, variable=v, value=1, command=lambda: log.append(v.get())); r.invoke(); result = log
+---
+s = tk.Scale(root, from_=0, to=10, orient='horizontal'); s.set(4); result = (s.get(), type(s.get()).__name__)
+---
+s = tk.Scale(root, from_=0, to=10); s.set(99); result = s.get()
+---
+s = tk.Scale(root, from_=0, to=1, resolution=0.1); s.set(0.34); result = (s.get(), type(s.get()).__name__)
+---
+v = tk.IntVar(root); s = tk.Scale(root, from_=0, to=100, variable=v); s.set(42); result = v.get()
+---
+v = tk.DoubleVar(root); s = tk.Scale(root, from_=0, to=100, variable=v); v.set(30); result = s.get()
+---
+log = []; s = tk.Scale(root, from_=0, to=10, command=log.append); root.update(); s.set(5); result = log
+---
+sp = tk.Spinbox(root, from_=0, to=10); result = (sp.get(),)
+---
+sp = tk.Spinbox(root, values=('a', 'b', 'c')); result = (sp.get(),)
+---
+sp = tk.Spinbox(root, from_=1, to=5); sp.invoke('buttonup'); sp.invoke('buttonup'); sp.invoke('buttondown'); result = sp.get()
+---
+sp = tk.Spinbox(root, from_=1, to=3, wrap=True); sp.invoke('buttondown'); result = sp.get()
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c'); lb.insert(0, 'z'); result = (lb.size(), lb.get(0), lb.get(0, tk.END), lb.get(tk.END))
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c', 'd'); lb.delete(1); lb.delete(0, 0); result = lb.get(0, tk.END)
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c', 'd'); lb.delete(0, tk.END); result = (lb.size(), lb.get(0, tk.END))
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c'); lb.selection_set(1); result = (lb.curselection(), lb.get(lb.curselection()[0]))
+---
+lb = tk.Listbox(root, selectmode='extended'); lb.insert(tk.END, 'a', 'b', 'c'); lb.selection_set(0, 1); result = lb.curselection()
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c'); lb.selection_set(0); lb.selection_set(2); result = lb.curselection()
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 1, 2); result = lb.get(0, tk.END)
+---
+t = tk.Text(root); t.insert('1.0', 'hello'); result = (t.get('1.0', tk.END), t.get('1.0', 'end-1c'))
+---
+t = tk.Text(root); t.insert(tk.END, 'line1\nline2'); result = (t.get('2.0', tk.END), t.get('1.0', '1.end'), t.index(tk.END))
+---
+t = tk.Text(root); t.insert(tk.END, 'abc'); t.insert(tk.END, 'def'); t.insert('1.0', '>'); result = t.get('1.0', 'end-1c')
+---
+t = tk.Text(root); t.insert(tk.END, 'hello world'); t.delete('1.0', '1.5'); result = t.get('1.0', 'end-1c')
+---
+t = tk.Text(root); t.insert(tk.END, 'hello'); t.delete('1.0', tk.END); result = repr(t.get('1.0', tk.END))
+---
+t = tk.Text(root, state='disabled'); t.insert(tk.END, 'x'); result = repr(t.get('1.0', 'end-1c'))
+---
+t = tk.Text(root); t.insert(tk.END, 'a\nb\nc'); result = (t.get('2.0', '3.0'), t.get('1.0', '1.2'), t.index('end-1c'), t.index('2.0 lineend'))
+---
+t = tk.Text(root); t.insert(tk.END, 'a\nb\nc'); result = (int(t.index('end-1c').split('.')[0]), t.get('1.0', 'end-1c').count('\n') + 1)
+---
+t = tk.Text(root); t.insert(tk.INSERT, 'ab'); t.insert(tk.INSERT, 'cd'); result = t.get('1.0', 'end-1c')
+---
+c = tk.Canvas(root, width=200, height=100); r = c.create_rectangle(10, 10, 50, 50, fill='red'); o = c.create_oval(0, 0, 5, 5); result = (r, o, c.coords(r), c.type(r), c.find_all())
+---
+c = tk.Canvas(root); r = c.create_line(0, 0, 10, 10, 20, 0); result = c.coords(r)
+---
+c = tk.Canvas(root); r = c.create_line((0, 0), (10, 10)); result = c.coords(r)
+---
+c = tk.Canvas(root); r = c.create_rectangle(10, 10, 50, 50); c.move(r, 5, -5); result = c.coords(r)
+---
+c = tk.Canvas(root); r = c.create_rectangle(10, 10, 50, 50); c.coords(r, 0, 0, 5, 5); result = c.coords(r)
+---
+c = tk.Canvas(root); r = c.create_rectangle(10, 10, 50, 50, fill='red', tags=('a', 'b')); c.itemconfigure(r, fill='blue'); result = (c.itemcget(r, 'fill'), c.gettags(r), c.find_withtag('a'))
+---
+c = tk.Canvas(root); r = c.create_rectangle(10, 10, 50, 50, tags='box'); s = c.create_rectangle(1, 1, 2, 2, tags='box'); c.delete('box'); result = (c.find_all(), c.create_oval(0, 0, 1, 1))
+---
+c = tk.Canvas(root); c.create_oval(0, 0, 1, 1); c.create_oval(0, 0, 1, 1); c.delete(tk.ALL); result = (c.find_all(), c.create_text(5, 5, text='hi'))
+---
+c = tk.Canvas(root); t = c.create_text(5, 5, text='hi'); result = (c.itemcget(t, 'text'), c.type(t), c.coords(t))
+---
+m = tk.Menu(root); m.add_command(label='Open'); m.add_command(label='Save'); result = (m.index(tk.END), m.index('Open'), m.entrycget(1, 'label'), m.type(0), m.type(1))
+---
+m = tk.Menu(root, tearoff=0); m.add_command(label='Open'); m.add_separator(); m.add_command(label='Quit'); result = (m.index(tk.END), m.type(1), m.entrycget(2, 'label'))
+---
+m = tk.Menu(root, tearoff=0); result = m.index(tk.END)
+---
+m = tk.Menu(root, tearoff=0); log = []; m.add_command(label='Go', command=lambda: log.append(1)); m.invoke(0); m.invoke('Go'); result = log
+---
+m = tk.Menu(root, tearoff=0); m.add_command(label='Go'); m.entryconfigure('Go', state='disabled'); result = m.entrycget('Go', 'state')
+---
+bar = tk.Menu(root); f = tk.Menu(bar, tearoff=0); bar.add_cascade(label='File', menu=f); root.config(menu=bar); result = (bar.index(tk.END), bar.entrycget(1, 'label'))
+---
+root.title('Hello'); root.geometry('300x200'); root.resizable(False, False); result = (root.title(), root.geometry().split('+')[0] if False else root.resizable())
+---
+result = root.title()
+---
+root.title('A'); result = (root.wm_title(), root.winfo_exists())
+---
+root.destroy(); result = root.winfo_exists()
+---
+f = tk.Frame(root); l = tk.Label(f); l2 = tk.Label(f); result = ([str(w) for w in f.winfo_children()], str(f), l.winfo_parent() == str(f), l.master is f)
+---
+f = tk.Frame(root); l = tk.Label(f); f.destroy(); result = (len(root.winfo_children()), l.winfo_exists())
+---
+l = tk.Label(root); l.destroy(); result = len(root.winfo_children())
+---
+l = tk.Label(root); h = lambda e: None; l.bind('<Button-1>', h); result = (bool(l.bind('<Button-1>')), l.bind('<Key>'))
+---
+a = root.after(1000, lambda: None); root.after_cancel(a); result = isinstance(a, str)
+---
+l = tk.Label(root, text='a', width=10, height=2); result = (l.cget('width'), l.cget('height'), l['state'], l['anchor'], l.cget('justify'))
+---
+b = tk.Button(root); result = (b['text'], b['state'], b['relief'], b['command'])
+---
+f = tk.LabelFrame(root, text='Group'); result = (f['text'], f.winfo_class())
+---
+b = ttk.Button(root, text='x', command=lambda: 5); result = (b.invoke(), b.instate(['disabled']), b.state())
+---
+b = ttk.Button(root, text='x', command=lambda: 5); b.state(['disabled']); result = (b.invoke(), b.instate(['disabled']), b.state()); b.state(['!disabled']); result += (b.invoke(),)
+---
+b = ttk.Button(root, text='x', state='disabled'); result = (b.instate(['disabled']), b.cget('state'))
+---
+cb = ttk.Combobox(root, values=('a', 'b', 'c')); result = (cb.get(), cb.current(), cb['values']); cb.current(1); result += (cb.get(), cb.current())
+---
+cb = ttk.Combobox(root, values=['a', 'b']); cb.set('zzz'); result = (cb.get(), cb.current())
+---
+cb = ttk.Combobox(root); cb['values'] = ['x', 'y']; result = (cb['values'],)
+---
+cb = ttk.Combobox(root, values=('a', 'b'), state='readonly'); result = (cb.cget('state'), cb.instate(['readonly']))
+---
+v = tk.StringVar(root); cb = ttk.Combobox(root, textvariable=v, values=('a', 'b')); cb.current(1); result = v.get()
+---
+p = ttk.Progressbar(root, maximum=10); p['value'] = 4; p.step(2); result = p['value']
+---
+p = ttk.Progressbar(root); result = (p['value'], p['maximum'], p['mode'])
+---
+p = ttk.Progressbar(root); p.step(); p.step(); result = p['value']
+---
+p = ttk.Progressbar(root, maximum=5); p['value'] = 4; p.step(3); result = p['value']
+---
+nb = ttk.Notebook(root); a = ttk.Frame(nb); b = ttk.Frame(nb); nb.add(a, text='One'); nb.add(b, text='Two'); result = (len(nb.tabs()), nb.index(nb.select()), nb.tab(1, 'text')); nb.select(b); result += (nb.index(nb.select()),)
+---
+tv = ttk.Treeview(root, columns=('a', 'b'), show='headings'); i1 = tv.insert('', tk.END, values=(1, 'x')); i2 = tv.insert('', tk.END, values=('007', 'y')); result = (i1, i2, tv.get_children(), tv.item(i1)['values'], tv.item(i2, 'values'))
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', text='row', values=('hello',)); result = (tv.item(i, 'text'), tv.item(i)['values'], tv.set(i, 'a'))
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', iid='mine', values=(5,)); j = tv.insert('', 'end', values=(6,)); tv.delete(i); result = (tv.get_children(), tv.exists('mine'))
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', values=(5,)); tv.selection_set(i); result = (tv.selection() == (i,), tv.item(tv.selection()[0])['values'])
+---
+tv = ttk.Treeview(root, columns=('a',)); [tv.insert('', 'end', values=(n,)) for n in range(3)]; tv.delete(*tv.get_children()); result = tv.get_children()
+---
+tv = ttk.Treeview(root, columns=('a', 'b')); tv.heading('a', text='Name'); tv.column('a', width=80); result = (tv.heading('a', 'text'), tv.column('a', 'width'))
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', values=(1,)); tv.item(i, values=(9,)); result = tv.item(i)['values']
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', values=(1.5, 'a b')); result = tv.item(i)['values']
+---
+s = ttk.Style(); result = (s.theme_use() in s.theme_names(),)
+---
+messagebox.__name__
+---
+f = tk.Frame(root, bg='red', width=100, height=50); result = (f['width'], f['height'], f['bg'], f['background'])
+---
+l = tk.Label(root, text='t', font=('Arial', 12)); result = l['text']
+---
+l = tk.Label(root, text='t'); l.config(text=5); result = (l['text'], type(l['text']).__name__)
+---
+v = tk.StringVar(root, value='hello'); l = tk.Label(root, textvariable=v); result = (l['textvariable'] == str(v), l['text'])
+---
+x = tk.Frame(root); y = tk.Frame(x); z = tk.Frame(y); result = (z.winfo_toplevel() is root, str(z))
+---
+t = tk.Toplevel(root); t.title('Win'); result = (t.title(), str(t), isinstance(t, tk.Toplevel), len(root.winfo_children()))
+---
+l = tk.Label(root, text='a'); l.grid(row=0, column=0); l2 = tk.Label(root, text='b'); l2.grid(row=0, column=1, columnspan=2, padx=4); result = (l2.grid_info()['columnspan'], l2.grid_info()['padx'], root.grid_size())
+---
+result = (tk.END, tk.LEFT, tk.BOTH, tk.W, tk.NSEW, tk.DISABLED, tk.NORMAL, tk.WORD, tk.HORIZONTAL, tk.INSERT)
+---
+e = tk.Entry(root); e.insert(0, 'abc'); e.delete(0, 'end'); e.insert(0, 'xyz'); result = e.get()
+---
+e = tk.Entry(root, width=30); result = (e['width'], e['state'], e['show'] == '')
+---
+e = tk.Entry(root); e.insert(0, 'Hello'); result = (e.get().upper(), len(e.get()))
+
+---
+tv = ttk.Treeview(root, columns=('a',)); i = tv.insert('', 'end', values=(1.5, '007', 3)); result = (tv.item(i, 'values'), tv.set(i, 'a'))
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c'); result = (lb.index(tk.END), lb.get(tk.END), lb.get(0, 1), lb.get(5), lb.get(-1) if False else 0)
+---
+lb = tk.Listbox(root); lb.insert(tk.END, 'a', 'b', 'c'); lb.delete(tk.END); result = lb.get(0, tk.END)
+---
+l = tk.Label(root, tex='x'); result = l['text']
+---
+l = tk.Label(root, te='x')
+---
+root.title('x'); result = (root.winfo_class(), tk.Label(root).winfo_class(), ttk.Button(root).winfo_class(), tk.LabelFrame(root).winfo_class())
+---
+sp = tk.Spinbox(root, from_=0, to=1, increment=0.5); sp.invoke('buttonup'); result = sp.get()
+---
+sp = tk.Spinbox(root, from_=0, to=5); sp.delete(0, tk.END); sp.insert(0, '3'); sp.invoke('buttonup'); result = sp.get()
+---
+e = tk.Entry(root); e.insert(0, 'abc'); result = (e.get(), e.index('end'), e.index(1))
+---
+root.geometry('300x200+10+20'); result = root.geometry()
+---
+t = tk.Text(root); t.insert('end', 'a\nb'); result = (t.get('end-2c', 'end-1c'), t.get('1.0'), t.get('1.1'))
+---
+t = tk.Text(root); t.insert('1.0', 'one\ntwo\nthree'); t.delete('2.0', '3.0'); result = t.get('1.0', 'end-1c')
+---
+t = tk.Text(root); t.insert('1.0', 'one\ntwo'); t.delete('1.0', 'end'); result = (t.get('1.0', 'end'), t.index('end'))
+---
+v = tk.BooleanVar(root); c = tk.Checkbutton(root, variable=v); c.invoke(); a = v.get(); c.invoke(); result = (a, v.get())
+---
+s = tk.Scale(root, from_=10, to=50, resolution=5); s.set(23); result = s.get()
+---
+v = tk.StringVar(root); l = tk.Label(root, textvariable=v); v.set('x'); a = l.cget('text'); v.set('yy'); result = (a, l.cget('text'))
+---
+v = tk.StringVar(root); e = tk.Entry(root, textvariable=v); v.set('typed'); a = e.get(); e.insert('end', '!'); result = (a, v.get())
+---
+log = []; v = tk.StringVar(root); v.trace_add('write', lambda *a: log.append(v.get())); v.set('a'); v.set('a'); v.get(); v.set('b'); v.set('b'); result = log
+---
+log = []; v = tk.StringVar(root); n = v.trace_add('write', lambda *a: log.append(v.get())); v.set('a'); v.trace_remove('write', n); v.set('b'); result = (log, v.trace_info())
+---
+v = tk.IntVar(root); e = tk.Entry(root, textvariable=v); e.delete(0, 'end'); r = []
+try:
+    v.get()
+except tk.TclError as ex:
+    r.append(type(ex).__name__)
+e.insert(0, 'abc')
+try:
+    v.get()
+except tk.TclError as ex:
+    r.append(type(ex).__name__)
+e.delete(0, 'end'); e.insert(0, '12'); r.append(v.get()); result = r
+---
+s1 = tk.StringVar(root, 'a'); s2 = tk.StringVar(root); e1 = tk.Entry(root, textvariable=s1); e2 = tk.Entry(root, textvariable=s1); e1.insert('end', 'b'); result = (e2.get(), s1.get(), s2.get())
+---
+v = tk.DoubleVar(root); v.set(3); result = (v.get(), type(v.get()).__name__)
+---
+v = tk.IntVar(root, value=7); l = tk.Label(root, textvariable=v); result = (l.cget('text'), v.get())
+---
+a = tk.Label(root, text='a'); b = tk.Label(root, text='b'); c = tk.Label(root, text='c'); c.pack(); a.pack(); b.pack(); result = [w.cget('text') for w in root.pack_slaves()]
+---
+a = tk.Label(root, text='a'); b = tk.Label(root, text='b'); a.pack(); b.pack(); a.pack(fill='x'); result = ([w.cget('text') for w in root.pack_slaves()], a.pack_info()['fill'])
+---
+a = tk.Label(root, text='a'); a.pack(expand=True, fill='both', side='left'); i = a.pack_info(); result = (i['expand'], i['fill'], i['side'], type(i['expand']).__name__)
+---
+a = tk.Label(root, text='a', relief='sunken', anchor='w'); result = (str(a.cget('relief')), str(a.cget('anchor')))
+---
+f = tk.Frame(root); f.columnconfigure(1, weight=2); f.rowconfigure(0, weight=1); result = (f.columnconfigure(1)['weight'], f.columnconfigure(0)['weight'], f.rowconfigure(0)['weight'], f.rowconfigure(3)['weight'], type(f.columnconfigure(1)['weight']).__name__)
+---
+f = tk.Frame(root); [tk.Button(f, text=str(i)).grid(row=i // 3, column=i % 3, sticky='nsew') for i in range(7)]; result = f.grid_size()
+---
+l = tk.Label(root); l.grid(row=0, column=0, sticky='center')
+---
+l = tk.Label(root); l.grid(row=0, column=0, columnspan=3, sticky='ew'); i = l.grid_info(); result = (i['columnspan'], i['sticky'], i['row'], i['column'])
+---
+f = tk.Frame(root); a = tk.Label(f, text='a'); a.grid(row=2, column=3); b = tk.Label(f, text='b'); b.grid(row=0, column=0); result = (f.grid_size(), f.grid_slaves(row=2)[0].cget('text'), [w.cget('text') for w in f.grid_slaves()])
+---
+q = tk.Frame(root); f = tk.Label(q, text='f'); f.grid(row=9, column=9, sticky='n', padx=3); f.grid_remove(); a = f.winfo_manager(); f.grid(); i = f.grid_info(); f.grid_forget(); f.grid(); j = f.grid_info(); result = (a, i['row'], i['column'], i['sticky'], i['padx'], j['row'], j['column'], j['sticky'])
+---
+g = tk.Label(root, text='g'); g.place(relx=0.5, rely=0.5, anchor='center'); i = g.place_info(); result = (i['relx'], i['rely'], i['anchor'], g.winfo_manager())
+---
+a = tk.Label(root, text='a'); a.pack(); b = tk.Label(root, text='b'); b.place(x=1, y=2); result = (a.winfo_manager(), b.winfo_manager())
+---
+c = tk.Label(root, text='c'); c.place(x='left', y=10)
+---
+c = tk.Label(root, text='c'); c.place(relx='half', y=10)
+---
+c = tk.Label(root, text='c'); c.place(x='3c', y=-4, width=10.5); i = c.place_info(); result = (i['x'], i['y'], i['width'])
+---
+log = []
+lab = tk.Label(root, text='x'); lab.pack(); root.update()
+lab.bind('<Button-1>', lambda e: log.append((e.x, e.y, e.num, e.widget is lab, e.state, e.keysym, e.char)))
+lab.event_generate('<Button-1>', x=5, y=6)
+lab.event_generate('<Button-1>')
+lab.event_generate('<Button-2>', x=1, y=1)
+lab.event_generate('<ButtonRelease-1>')
+result = log
+---
+log = []
+lab = tk.Label(root, text='x'); lab.pack(); root.update(); lab.focus_force(); root.update()
+lab.bind('<Key>', lambda e: log.append((e.keysym, e.char, e.state, e.keysym_num, e.num)))
+for s in ('<a>', '<A>', '<Return>', '<space>', '<Escape>', '<Left>', '<Control-s>', '<Alt-x>', '<Key>'):
+    lab.event_generate(s, **({'keysym': 'z'} if s == '<Key>' else {}))
+result = log
+---
+log = []
+lab = tk.Label(root, text='x'); lab.pack(); root.update(); lab.focus_force(); root.update()
+lab.bind('<Key>', lambda e: log.append('generic ' + e.keysym))
+lab.bind('<a>', lambda e: log.append('a'))
+lab.bind('<Control-a>', lambda e: log.append('ctrl-a'))
+lab.bind('<Return>', lambda e: log.append('ret'))
+for s in ('<a>', '<b>', '<Control-a>', '<Return>', '<Shift-a>', '<Control-b>'):
+    lab.event_generate(s)
+result = log
+---
+log = []
+f = tk.Frame(root); f.pack(); lab = tk.Label(f, text='x'); lab.pack(); root.update()
+lab.bind('<Button-1>', lambda e: log.append('label'))
+f.bind('<Button-1>', lambda e: log.append('frame'))
+root.bind('<Button-1>', lambda e: log.append('root'))
+root.bind_all('<Button-1>', lambda e: log.append('all'))
+lab.event_generate('<Button-1>')
+log.append('--')
+lab.bind('<Button-1>', lambda e: (log.append('label2'), 'break')[1])
+lab.event_generate('<Button-1>')
+log.append('--')
+lab.bind('<Button-1>', lambda e: log.append('label3'))
+lab.bind('<Button-1>', lambda e: log.append('label4'), add='+')
+lab.event_generate('<Button-1>')
+result = log
+---
+log = []
+f = tk.Frame(root); f.pack(); lab = tk.Label(f, text='x'); lab.pack(); root.update()
+root.bind('<<Go>>', lambda e: log.append(('root', e.widget is lab)))
+lab.bind('<<Go>>', lambda e: log.append(('label', e.widget is lab)))
+lab.event_generate('<<Go>>')
+lab.unbind('<<Go>>')
+lab.event_generate('<<Go>>')
+result = log
+---
+log = []
+lab = tk.Label(root, text='x'); lab.pack(); root.update()
+lab.bind('<B1-Motion>', lambda e: log.append(('drag', e.x, e.y, e.state)))
+lab.bind('<Motion>', lambda e: log.append(('move', e.x, e.y, e.state)))
+lab.event_generate('<Motion>', x=1, y=2)
+lab.event_generate('<B1-Motion>', x=3, y=4)
+lab.bind('<Enter>', lambda e: log.append('enter'))
+lab.bind('<Leave>', lambda e: log.append('leave'))
+lab.event_generate('<Enter>')
+lab.event_generate('<Leave>')
+lab.bind('<MouseWheel>', lambda e: log.append(('wheel', e.delta)))
+lab.event_generate('<MouseWheel>', delta=-120)
+result = log
+---
+log = []
+root.after(0, lambda: log.append('after0'))
+root.after_idle(lambda: log.append('idle'))
+i = root.after(5000, lambda: log.append('later'))
+j = root.after(0, lambda: log.append('cancelled'))
+root.after_cancel(j)
+root.update()
+result = (log, isinstance(i, str))
+---
+l = tk.Label(root); l.bind('<Double-Button-1>', lambda e: 0)
+---
+l = tk.Label(root); h = lambda e: None; l.bind('<Control-s>', h); l.bind('<Escape>', h); l.bind('q', h); result = (len(l.bind()), any('Control' in s for s in l.bind()), any('Escape' in s for s in l.bind()))
+---
+log = []
+lab = tk.Label(root, text='x'); lab.pack(); root.update()
+lab.bind('<Button-1>', lambda e: (log.append('first'), 'break')[1])
+lab.bind('<Button-1>', lambda e: log.append('second'), add='+')
+root.bind('<Button-1>', lambda e: log.append('root'))
+lab.event_generate('<Button-1>')
+result = log
+---
+def boom(): raise ValueError('boom')
+log = []
+root.report_callback_exception = lambda exc, val, tb: log.append((exc.__name__, str(val)))
+b = tk.Button(root, text='x', command=boom)
+r = b.invoke()
+lab = tk.Label(root, text='x'); lab.pack(); root.update()
+lab.bind('<Button-1>', lambda e: 1 / 0)
+lab.event_generate('<Button-1>')
+root.after(0, boom); root.update()
+v = tk.StringVar(root); v.trace_add('write', lambda *a: boom()); v.set('x')
+c = tk.Checkbutton(root, command=boom); c.invoke()
+result = (r, log, v.get())
+---
+b5 = tk.Button(root, text='x', command=print('created')); result = (b5.invoke(),)
+---
+res = []
+import functools
+b = tk.Button(root, command=functools.partial(res.append, 5)); a = b.invoke(); b.config(command=lambda: res.append('new')); b.invoke(); b.config(command=''); result = (a, res, b.invoke())
+---
+bar = tk.Menu(root, tearoff=0); root.config(menu=bar)
+view = tk.Menu(bar, tearoff=0); bar.add_cascade(label='View', menu=view)
+show = tk.BooleanVar(root, value=False)
+log = []
+view.add_checkbutton(label='Status bar', variable=show, command=lambda: log.append('status'))
+size = tk.StringVar(root, value='small')
+view.add_radiobutton(label='Small', variable=size, value='small')
+view.add_radiobutton(label='Large', variable=size, value='large', command=lambda: log.append('large'))
+a = []
+view.invoke(0); a.append(show.get()); view.invoke(0); a.append(show.get())
+view.invoke(2); a.append(size.get()); view.invoke('Small'); a.append(size.get())
+view.add_separator(); view.add_command(label='Exit', command=lambda: log.append('exit'))
+a.append(view.invoke(3)); a.append(view.invoke('Exit'))
+view.entryconfigure('Exit', state='disabled'); a.append(view.invoke('Exit'))
+a.append(view.entrycget('Exit', 'state')); a.append(view.entrycget(0, 'state'))
+a.append(str(bar.entrycget(0, 'menu')) == str(view)); a.append(bar.nametowidget(str(bar.entrycget(0, 'menu'))) is view)
+a.append(str(root.cget('menu')) == str(bar))
+result = (a, log, view.index(tk.END), view.type(3))
+---
+bar = tk.Menu(root); bar.add_cascade(label='File'); result = (bar.index(tk.END), bar.type(0), bar.type(1))
+---
+t = tk.Toplevel(root); a = (t.winfo_exists(), t.winfo_toplevel() is t, t.winfo_class(), len(root.winfo_children())); t.destroy(); result = (a, t.winfo_exists(), len(root.winfo_children()))
+---
+t = tk.Toplevel(root); t.withdraw(); a = t.state(); t.deiconify(); b = t.state(); t.protocol('WM_DELETE_WINDOW', lambda: None); result = (a, b, bool(t.protocol('WM_DELETE_WINDOW')), t.protocol('WM_TAKE_FOCUS') == '')
+---
+log = []
+def step(n):
+    log.append(n)
+    if n < 3: root.after(0, step, n + 1)
+root.after(0, step, 1); root.update(); result = log
+---
+log = []
+j = root.after(0, lambda: log.append('ran')); root.after_cancel(j); root.update(); root.after_cancel(j); result = (log, j.startswith('after#'))
+---
+try: root.after_cancel(None)
+except Exception as e: result = (type(e).__name__, str(e))
+---
+log = []
+root.after_idle(log.append, 'idle'); root.after(0, log.append, 'zero'); root.update(); result = sorted(log)
+---
+try: root.after('x', lambda: None)
+except Exception as e: result = (type(e).__name__, str(e))
+---
+log = []
+root.report_callback_exception = lambda exc, val, tb: log.append(exc.__name__)
+def boom(): raise ValueError('x')
+root.after(0, boom); root.after(0, log.append, 'after'); root.update(); result = log
+---
+l = tk.Label(root, text='0'); l.pack(); n = {'v': 0}
+def tick():
+    n['v'] += 1; l.config(text=str(n['v']))
+    if n['v'] < 4: root.after(0, tick)
+root.after(0, tick); root.update(); result = l.cget('text')
+
+---
+c = tk.Canvas(root, width=300, height=200); c.pack(); root.update()
+ids = [c.create_rectangle(10, 10, 50, 40, fill='red'), c.create_oval(60, 10, 100, 50, fill='blue', tags=('ball', 'shape')), c.create_line(0, 0, 100, 100, 120, 20), c.create_polygon(200, 10, 250, 10, 225, 50, fill='gold', tags='tri'), c.create_arc(10, 100, 60, 150, start=0, extent=90)]
+result = (ids, [c.coords(i) for i in ids], [c.bbox(i) for i in ids], c.bbox('all'), c.bbox('nope'), [c.type(i) for i in ids])
+---
+c = tk.Canvas(root, width=300, height=200); c.pack(); root.update()
+r = c.create_rectangle(10, 10, 50, 40, fill='red'); o = c.create_oval(60, 10, 100, 50, fill='blue', tags=('ball', 'shape')); l = c.create_line(0, 0, 100, 100, 120, 20); p = c.create_polygon(200, 10, 250, 10, 225, 50, fill='gold', tags='tri')
+result = (c.find_overlapping(20, 20, 20, 20), c.find_overlapping(290, 190, 290, 190), c.find_overlapping(10, 10, 10, 10), c.find_overlapping(0, 0, 300, 5), c.find_enclosed(0, 0, 120, 60), c.find_withtag('ball'), c.find_withtag('shape'), c.find_withtag('nope'), c.find_withtag(r), c.find_withtag('all'), c.gettags(o), c.gettags(r), c.gettags(p))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack(); root.update()
+r = c.create_rectangle(10, 10, 50, 40, fill='red'); o = c.create_oval(60, 10, 100, 50, fill='blue'); l = c.create_line(150, 150, 190, 190); t = c.create_rectangle(120, 100, 160, 140)
+result = (c.find_closest(15, 15), c.find_closest(80, 30), c.find_closest(155, 155), c.find_closest(130, 120), c.find_closest(280, 20), c.find_overlapping(140, 120, 140, 120), c.find_overlapping(121, 101, 159, 139), c.find_overlapping(100, 100, 130, 130))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+a = c.create_rectangle(1, 1, 2, 2); b = c.create_rectangle(1, 1, 2, 2); d = c.create_rectangle(1, 1, 2, 2); e = c.create_rectangle(1, 1, 2, 2)
+out = []
+c.tag_raise(a); out.append(c.find_all()); c.tag_lower(a); out.append(c.find_all()); c.tag_raise(b, d); out.append(c.find_all()); c.tag_lower(e, b); out.append(c.find_all())
+out += [c.find_above(a), c.find_below(a), c.find_above(e), c.find_below(e)]
+c.delete(b); n = c.create_text(1, 1); out.append((n, c.find_all()))
+c.delete('all'); out.append((c.create_text(1, 1), c.find_all()))
+result = out
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+r = c.create_rectangle(10, 10, 50, 40, fill='red'); o = c.create_oval(60, 10, 100, 50, tags='ball')
+c.move(r, 5, 5); a = c.coords(r); c.move('ball', 0.5, 1); b = c.coords(o); c.coords(r, 0, 0, 10, 10); d = c.coords(r); c.coords(r, (1, 2, 3, 4)); e = c.coords(r); c.scale(r, 0, 0, 2, 3); f = c.coords(r)
+result = (a, b, d, e, f, c.coords(9999), c.move(9999, 1, 1), c.coords(r, 5, 6, 7, 8))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+r = c.create_rectangle(10, 10, 50, 40, fill='red', width=3, dash=(4, 2), tags='a b'); t = c.create_text(5, 5, text='Hi', font=('Arial', 16, 'bold'), anchor='nw'); l = c.create_line(1, 2, 3, 4, arrow='last', smooth=True, capstyle='round')
+c.itemconfig(r, fill='green', outline='')
+result = ([c.itemcget(r, k) for k in ('fill', 'outline', 'width', 'dash', 'tags', 'state')], [c.itemcget(t, k) for k in ('text', 'font', 'anchor', 'fill', 'width')], [c.itemcget(l, k) for k in ('arrow', 'smooth', 'width', 'capstyle', 'fill')], c.itemconfig(r)['fill'][-1], c.itemcget(9999, 'fill'))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+errs = []
+for f in (lambda: c.create_rectangle(1, 2, 3, 4, colour='red'), lambda: c.create_rectangle(1, 2, 3), lambda: c.create_line(1, 2, 3), lambda: c.create_line(1, 2), lambda: c.create_polygon(1, 2, 3, 4), lambda: c.create_rectangle(1, 2, 3, 4, fill='nocolor'), lambda: c.create_oval('a', 'b', 'c', 'd'), lambda: c.itemcget(c.create_rectangle(1, 2, 3, 4), 'bogus'), lambda: c.itemconfig(c.create_rectangle(1, 2, 3, 4), bogus=1), lambda: c.create_rectangle(1, 2, 3, 4, width='wide')):
+    try: f(); errs.append('ok')
+    except Exception as e: errs.append((type(e).__name__, str(e)))
+result = errs
+---
+c = tk.Canvas(root, width=300, height=200); c.pack(); root.update()
+log = []
+c.create_rectangle(10, 10, 60, 60, fill='red', tags='btn')
+c.tag_bind('btn', '<Button-1>', lambda e: log.append(('btn', e.x, e.y)))
+c.bind('<Button-1>', lambda e: log.append(('canvas', e.x, e.y)))
+c.event_generate('<Button-1>', x=30, y=30); c.event_generate('<Button-1>', x=200, y=100)
+result = (log, c.tag_bind('btn'), c.canvasx(5), c.canvasy(7))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+r = c.create_rectangle(10, 10, 50, 40); r2 = c.create_rectangle(60, 10, 100, 40, outline='', fill='red'); r3 = c.create_rectangle(10, 100, 50, 140, fill='red', outline='blue', width=6)
+c.addtag_withtag('x', r); c.addtag_all('all2'); c.addtag_withtag('x', r)
+c.dtag(r, 'x'); c.dtag('all2', 'all2') if False else None
+result = (c.gettags(r), c.gettags(r2), c.find_withtag('all2'), c.find_overlapping(30, 25, 30, 25), c.find_overlapping(11, 11, 12, 12), c.find_overlapping(10, 25, 10, 25), c.find_overlapping(80, 25, 80, 25), c.bbox(r2), c.bbox(r3), c.find_enclosed(0, 0, 120, 60))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+o = c.create_oval(100, 100, 140, 140, fill='red'); u = c.create_oval(200, 100, 240, 140)
+result = (c.find_overlapping(101, 101, 101, 101), c.find_overlapping(120, 120, 120, 120), c.find_overlapping(219, 120, 221, 121), c.find_overlapping(220, 120, 220, 120), c.find_overlapping(208, 108, 209, 109), c.find_closest(121, 121), c.find_closest(300, 300), c.bbox(o), c.bbox(u))
+---
+c = tk.Canvas(root, width=300, height=200); c.pack()
+l = c.create_line(0, 0, 100, 100); p = c.create_polygon(150, 10, 200, 10, 175, 60, fill='red'); p2 = c.create_polygon(150, 110, 200, 110, 175, 160, outline='black')
+result = (c.find_overlapping(50, 50, 50, 50), c.find_overlapping(50, 52, 50, 52), c.find_overlapping(175, 20, 175, 20), c.find_overlapping(151, 59, 151, 59), c.find_overlapping(175, 120, 175, 120), c.bbox(l), c.bbox(p), c.bbox(p2))
+
+---
+t = ttk.Treeview(root, columns=('name', 'age', 'score'), show='headings')
+a = t.insert('', 'end', values=('Ann', 30, 4.5)); b = t.insert('', 'end', values=('Bob', '007', 'x y')); c = t.insert('', 0, values=('Cy', 5, 1e3))
+result = (t.get_children(), t.item(a, 'values'), t.item(b, 'values'), t.item(c)['values'], t.set(a, 'age'), t.set(a), t.index(a), t.parent(a), t['columns'], t.exists(a), t.exists('zzz'), t.item(a, 'text'))
+---
+t = ttk.Treeview(root, columns=('x',), show='tree headings')
+p = t.insert('', 'end', text='Parent', values=(1,)); k = t.insert(p, 'end', text='Kid', values=(2,)); k2 = t.insert(p, 0, iid='first', text='First', values=(3,))
+out = [t.get_children(), t.get_children(p), t.parent(k), t.index(k2), t.item(p, 'text'), t.item(p, 'open')]
+t.move(k, '', 'end'); out += [t.get_children(), t.get_children(p), t.parent(k)]
+t.delete(p); out += [t.get_children(), t.exists(k2), t.exists(k)]
+try: t.insert('', 'end', iid=k)
+except Exception as e: out.append((type(e).__name__, str(e)))
+try: t.item('nope')
+except Exception as e: out.append((type(e).__name__, str(e)))
+result = out
+---
+t = ttk.Treeview(root, columns=('a', 'b'), show='headings')
+i1 = t.insert('', 'end', values=(1, 2)); i2 = t.insert('', 'end', values=(3, 4)); i3 = t.insert('', 'end', values=(5, 6))
+out = [t.selection()]
+t.selection_set(i2); out.append(t.selection()); t.selection_add(i3); out.append(t.selection()); t.selection_remove(i2); out.append(t.selection()); t.selection_set((i1, i3)); out.append(t.selection())
+t.focus(i2); out.append(t.focus() == i2); t.delete(i3); out.append(t.selection())
+t.item(i1, values=(9, 9)); t.set(i1, 'b', 7); out.append(t.item(i1, 'values')); out.append(t.set(i1))
+t.move(i2, '', 0); out.append(t.get_children() == (i2, i1))
+t.delete(*t.get_children()); out.append(t.get_children())
+result = out
+---
+t = ttk.Treeview(root, columns=('a', 'b'), show='headings')
+t.heading('a', text='Name'); t.heading('b', text='Qty', anchor='e'); t.column('a', width=120); t.column('b', width=60, anchor='e', stretch=False)
+result = (t.heading('a', 'text'), t.heading('b', 'anchor'), t.column('a', 'width'), t.column('b', 'width'), t.column('b', 'anchor'), t.column('b', 'stretch'), t.heading('a')['text'], t.column('a')['width'])
+---
+t = ttk.Treeview(root, columns=('a',), show='headings'); log = []
+t.bind('<<TreeviewSelect>>', lambda e: log.append(t.selection()))
+i = t.insert('', 'end', values=(1,)); j = t.insert('', 'end', values=(2,))
+t.selection_set(i); root.update(); t.selection_set(j); root.update()
+result = log
+---
+cb = ttk.Combobox(root, values=['red', 'green', 'blue'], state='readonly')
+out = [cb.get(), cb.current(), cb['values'], cb.cget('values')]
+cb.current(1); out += [cb.get(), cb.current()]
+cb.set('blue'); out += [cb.get(), cb.current()]
+cb.set('zzz'); out += [cb.get(), cb.current()]
+try: cb.current(5)
+except Exception as e: out.append((type(e).__name__, str(e)))
+cb['values'] = ('a', 'b'); out.append(cb['values'])
+cb2 = ttk.Combobox(root, values='one two three'); out.append(cb2['values'])
+v = tk.StringVar(); cb3 = ttk.Combobox(root, textvariable=v, values=(1, 2, 3)); cb3.current(2); out += [v.get(), cb3['values']]
+result = out
+---
+cb = ttk.Combobox(root, values=['a', 'b']); log = []
+cb.bind('<<ComboboxSelected>>', lambda e: log.append(cb.get()))
+cb.set('b'); cb.event_generate('<<ComboboxSelected>>')
+result = (log, cb.winfo_class(), cb.instate(['readonly']), cb.state())
+---
+nb = ttk.Notebook(root); f1 = ttk.Frame(nb); f2 = ttk.Frame(nb); f3 = ttk.Frame(nb)
+nb.add(f1, text='One'); nb.add(f2, text='Two'); nb.insert(1, f3, text='Mid')
+out = [nb.tabs() == (str(f1), str(f3), str(f2)), nb.index(f2), nb.index('end'), nb.select() == str(f1), nb.tab(1, 'text'), nb.tab(f2)['text']]
+nb.select(f2); out += [nb.select() == str(f2), nb.index('current')]
+nb.select(0); out.append(nb.select() == str(f1))
+nb.tab(0, text='Renamed'); out.append(nb.tab(0, 'text'))
+nb.forget(1); out += [len(nb.tabs()), nb.index('end')]
+try: nb.select(9)
+except Exception as e: out.append((type(e).__name__, str(e)))
+result = out
+---
+pb = ttk.Progressbar(root, maximum=200, length=150)
+out = [pb['value'], pb.cget('maximum'), pb['mode'] == 'determinate' or str(pb['mode'])]
+pb['value'] = 50; out.append(pb['value']); pb.step(30); out.append(pb['value']); pb.step(); out.append(pb['value']); pb.step(200); out.append(pb['value'])
+pb.config(value=10.5); out.append(pb['value'])
+v = tk.DoubleVar(); p2 = ttk.Progressbar(root, variable=v); v.set(33); out.append(p2['value'])
+result = out
+---
+b = ttk.Button(root, text='Go'); out = [b.state(), b.instate(['disabled'])]
+out.append(b.state(['disabled'])); out += [b.state(), b.instate(['disabled']), b.instate(['!disabled'])]
+out.append(b.state(['!disabled'])); out += [b.state(), b.winfo_class(), ttk.Label(root).winfo_class(), ttk.Entry(root).winfo_class(), ttk.Frame(root).winfo_class(), ttk.Checkbutton(root).winfo_class(), ttk.Treeview(root).winfo_class(), ttk.Notebook(root).winfo_class(), ttk.Combobox(root).winfo_class(), ttk.Progressbar(root).winfo_class(), ttk.LabelFrame(root).winfo_class()]
+log = []; b2 = ttk.Button(root, text='x', command=lambda: log.append(1)); b2.invoke(); b2.state(['disabled']); out.append(b2.invoke()); out.append(log)
+result = out
+---
+s = ttk.Style(root)
+out = [s.theme_use() in s.theme_names(), 'clam' in s.theme_names()]
+s.configure('Big.TButton', padding=10, font=('Arial', 14)); out += [s.lookup('Big.TButton', 'padding'), s.configure('Big.TButton')['padding'], s.lookup('Big.TButton', 'font')]
+b = ttk.Button(root, text='x', style='Big.TButton'); out += [b.cget('style'), b.winfo_class(), ttk.Button(root).cget('style')]
+try: s.theme_use('nonexistent')
+except Exception as e: out.append((type(e).__name__, str(e)))
+result = out
+---
+v = tk.StringVar(value='hi'); l = ttk.Label(root, textvariable=v, text='ignored'); e = ttk.Entry(root, textvariable=v)
+iv = tk.IntVar(value=2); cbt = ttk.Checkbutton(root, text='c', variable=iv, onvalue=5, offvalue=2); cbt.invoke(); a = iv.get(); cbt.invoke(); b = iv.get()
+sv = tk.StringVar(); r1 = ttk.Radiobutton(root, text='a', variable=sv, value='A'); r2 = ttk.Radiobutton(root, text='b', variable=sv, value='B'); r2.invoke()
+sc = ttk.Scale(root, from_=0, to=10, value=3); sc2 = ttk.Scale(root, from_=0, to=10); sc2.set(7)
+result = (l.cget('text'), e.get(), a, b, sv.get(), sc.get(), sc2.get(), ttk.Separator(root).cget('orient'), ttk.LabelFrame(root, text='Box').cget('text'), ttk.Frame(root, padding=5).cget('padding') != '')
+---
+pw = ttk.Panedwindow(root, orient='horizontal'); f1 = ttk.Frame(pw); f2 = ttk.Frame(pw); pw.add(f1); pw.add(f2, weight=1)
+result = (len(pw.panes()), str(pw.cget('orient')), pw.panes() == (str(f1), str(f2)))
+
+---
+from tkinter import font as tkfont
+f = tkfont.nametofont('TkDefaultFont'); f.configure(size=10); a = (f.cget('size'), type(f.cget('size')).__name__)
+g = tkfont.nametofont('TkDefaultFont'); f.configure(size=14); b = g.cget('size')
+h = tkfont.Font(root, family='Arial', size=12, weight='bold'); out = [a, b, h.cget('size'), h.cget('weight'), h.cget('family')]
+for fn in (lambda: tkfont.Font(root, size='big'), lambda: tkfont.nametofont('NoSuchFont'), lambda: h.configure(colour=1)):
+    try: fn(); out.append('ok')
+    except Exception as e: out.append((type(e).__name__, str(e)))
+result = out
+---
+out = []
+for fn in (lambda: tk.Label(root, text='x', fg='reed'), lambda: tk.Frame(root, bg='#12'), lambda: tk.Button(root, activebackground='nocolor'), lambda: tk.Label(root, bg='#ff0000', fg='White', text='ok'), lambda: tk.Label(root, bg='gray50'), lambda: tk.Label(root).config(fg='lightGoldenrod'), lambda: tk.Label(root).configure(background='')):
+    try: fn(); out.append('ok')
+    except Exception as e: out.append((type(e).__name__, str(e)))
+result = out
+---
+s = ttk.Style(root); s.theme_use('clam'); s.configure('TFrame', background='#101820'); s.configure('TLabel', background='#101820', foreground='#eeeeee'); s.configure('Accent.TButton', background='#2a9d8f', foreground='white')
+s.map('Accent.TButton', background=[('active', '#21867a')])
+l = tk.Label(root, bg='#ff0000', fg='white', text='x'); l.pack(side='left'); root.configure(bg='#101820')
+result = (s.lookup('TFrame', 'background'), s.lookup('TLabel', 'foreground'), s.theme_use(), s.lookup('Accent.TButton', 'background'), s.lookup('Accent.TButton', 'foreground'), l.cget('bg'), l.cget('fg'), l.cget('text'), l.pack_info()['side'], root.cget('bg'))
+---
+img = tk.PhotoImage(width=8, height=8); big = img.zoom(3); sm = big.subsample(2); img.put('#ff0000', (1, 1))
+result = (img.width(), img.height(), big.width(), sm.width(), img.get(1, 1), img.get(0, 0))
+
+---
+s = ttk.Style(root); s.theme_use('clam'); s.configure('TFrame', background='#101820'); s.map('Accent.TButton', background=[('active', '#21867a'), ('disabled', '#bbbbbb')], foreground=[('disabled', '#eeeeee')]); s.configure('Accent.TButton', background='#2a9d8f')
+t = ttk.Style(root)
+out = [t.lookup('TFrame', 'background'), t.theme_use(), s.map('Accent.TButton', 'background'), s.lookup('Accent.TButton', 'background', ['active']), s.lookup('Accent.TButton', 'background', ['disabled', 'active']), s.lookup('Accent.TButton', 'background', []), s.lookup('Accent.TButton', 'foreground', ['disabled']), s.lookup('Accent.TButton', 'foreground')]
+t.theme_use('alt'); out.append((t.lookup('TFrame', 'background'), s.lookup('Accent.TButton', 'background')))
+t.theme_use('clam'); out.append(t.lookup('TFrame', 'background'))
+result = out

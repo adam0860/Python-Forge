@@ -41,6 +41,15 @@ jobs:
         # It does not block building the apps.
         continue-on-error: true
         run: npm run run-examples
+      - name: Run the tkinter and pygame example programs headlessly
+        # Advisory: opens each complete GUI example for a moment on a virtual display
+        # (tkinter) and SDL's dummy drivers (pygame). It does not block building the apps.
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-tk
+          python -m pip install pygame-ce
+          npm run run-gui-examples
       - name: Build web bundle
         run: npx vite build
 

@@ -6,7 +6,9 @@
  */
 import { pythonGlossary } from '../src/content/glossary/python';
 import { pymlGlossary } from '../src/content/glossary/pyml';
+import { tkinterGlossary } from '../src/content/glossary/tkinter';
+import { pygameGlossary } from '../src/content/glossary/pygame';
 
 export const MASTER_GLOSSARY_IDS: Record<string, string> = Object.fromEntries(
-  [...pythonGlossary, ...pymlGlossary].map((g) => [g.id, g.term]),
+  [...pythonGlossary, ...pymlGlossary, ...tkinterGlossary, ...pygameGlossary].map((g) => [g.id, g.term]),
 );

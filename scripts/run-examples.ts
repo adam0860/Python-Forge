@@ -70,17 +70,17 @@ function runSubprocess<T>(payload: object, bin: string = PY): Promise<T> {
   });
 }
 
-async function runJob(job: { code: string; stdin?: string; tests?: string; packages?: string[] }): Promise<PyResult> {
+async function runJob(job: { code: string; stdin?: string; tests?: string; packages?: string[]; setup?: string }): Promise<PyResult> {
   // Blocks that need extra packages (NumPy...) can't load them in this offline checker's Pyodide,
   // so they run on the system CPython instead (the packages must be pip-installed there).
   const needsPkgs = Boolean(job.packages?.length) || /^\s*(?:import|from)\s+(?:numpy|pandas|matplotlib|sklearn|scipy|torch|gymnasium|onnx|onnxruntime|stable_baselines3|rlgym\w*)\b/m.test(`${job.code}\n${job.tests ?? ''}`);
   if (!PY && needsPkgs) {
-    return runSubprocess<PyResult>({ code: job.code, stdin: job.stdin ?? null, tests: job.tests ?? null }, 'python3');
+    return runSubprocess<PyResult>({ code: job.code, stdin: job.stdin ?? null, tests: job.tests ?? null, setup: job.setup ?? null }, 'python3');
   }
-  if (PY) return runSubprocess<PyResult>({ code: job.code, stdin: job.stdin ?? null, tests: job.tests ?? null });
+  if (PY) return runSubprocess<PyResult>({ code: job.code, stdin: job.stdin ?? null, tests: job.tests ?? null, setup: job.setup ?? null });
   const py = await getPyodide();
   const fn = py.globals.get('run_job');
-  const res = fn(job.code, job.stdin ?? undefined, job.tests ?? undefined);
+  const res = fn(job.code, job.stdin ?? undefined, job.tests ?? undefined, job.setup ?? undefined);
   const obj = res.toJs({ dict_converter: Object.fromEntries }) as PyResult;
   res.destroy();
   return obj;
@@ -164,12 +164,12 @@ function collectQuestion(w: string, q: QuestionStep) {
       where: w,
       run: async () => {
         const tests = q.tests?.trim() ? q.tests : 'pass';
-        const sol = await runJob({ code: q.solution, stdin: q.stdin, tests });
+        const sol = await runJob({ code: q.solution, stdin: q.stdin, tests, setup: q.setup });
         if (!sol.ok) return `solution raises:\n${indent(sol.stderr)}`;
         if (q.expectOutput !== undefined && normalize(sol.stdout) !== normalize(q.expectOutput))
           return `solution output differs from expectOutput\n  expected:\n${indent(q.expectOutput, '    > ')}\n  actual:\n${indent(sol.stdout, '    > ')}`;
         if (sol.tests !== true) return `solution fails the tests: ${sol.message}`;
-        const st = await runJob({ code: q.starter, stdin: q.stdin, tests });
+        const st = await runJob({ code: q.starter, stdin: q.stdin, tests, setup: q.setup });
         const starterPasses =
           st.ok && st.tests === true && (q.expectOutput === undefined || normalize(st.stdout) === normalize(q.expectOutput));
         if (starterPasses) return 'the starter code already passes the tests — the question is free';

@@ -2,7 +2,7 @@
   "name": "python-forge",
   "productName": "Python Forge",
   "version": "1.0.0",
-  "description": "Learn Python from beginner to advanced, then AI, machine learning and game AI — with deep, interactive lessons and a built-in Python runtime.",
+  "description": "Learn Python from beginner to advanced, then AI, machine learning and game AI, desktop apps with tkinter and games with pygame — with deep, interactive lessons and a built-in Python runtime.",
   "author": "Python Forge",
   "license": "MIT",
   "private": true,
@@ -20,6 +20,8 @@
     "android:sync": "vite build && cap sync android",
     "android:open": "cap open android",
     "run-examples": "tsx scripts/run-examples.ts",
+    "run-gui-examples": "tsx scripts/run-gui-examples.ts",
+    "gen-sims": "node scripts/gen-sims.mjs",
     "postinstall": "node scripts/copy-pyodide.mjs",
     "scaffold": "node scripts/scaffold-curriculum.mjs"
   },
